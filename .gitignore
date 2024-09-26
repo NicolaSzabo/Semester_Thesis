@@ -1,0 +1,5 @@
+__pycache__/
+Cropped_images/
+CT_with_mask/
+NIFTI_files/
+Segmentation/

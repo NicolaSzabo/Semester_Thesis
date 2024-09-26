@@ -1,0 +1,9 @@
+numpy
+matplotlib
+pydicom
+pathlib
+nibabel
+dcm2niix
+TotalSegmentator
+nibabel
+
