@@ -25,14 +25,15 @@ def segment_images(input_directory, output_directory, object_of_interst):
             # Run TotalSegmentator for each NIfTI file
             print(f'Processing file: {input_path}')
             python_api.totalsegmentator(input_path, output_path, roi_subset = object_of_interest) # without GPU use: fastest = True
-
+            
+            
 
 if __name__ == '__main__':
     #Check if GPU is available
     print(torch.cuda.is_available())
     
-    input_directory = 'Cropped_images/'
-    output_directory = 'Segmentation/'
+    input_directory = 'NIFTI_files/'
+    output_directory = 'masks/'
     object_of_interest = ['heart']
     
     segment_images(input_directory, output_directory, object_of_interest)

@@ -6,4 +6,5 @@ nibabel
 dcm2niix
 TotalSegmentator
 nibabel
-
+nilearn
+segmentation-mask-overlay

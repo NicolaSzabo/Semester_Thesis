@@ -1,10 +1,11 @@
-import os
 import nibabel as nib
 import numpy as np
+import os
 
-def create_overlay(CT_directory, mask_directory, output_directory):
+
+def mask_overlay(CT_directory, mask_directory, output_directory):
     """
-    Create overlay of CT image with semi-transparent mask, darkening the background.
+    Multiply the binary masks with the unprocessed CT images
     
     Args:
         CT_directory (str): Path to directory containing CT images
@@ -38,29 +39,43 @@ def create_overlay(CT_directory, mask_directory, output_directory):
                             CT_data = CT_img.get_fdata()
                             mask_data = mask_img.get_fdata()
                             
-                            # Create an overlay where mask is semi-transparent (background is darkened)
-                            overlay = np.where(mask_data == 1, CT_data, CT_data * 0.1)
+                            # Replace 0 in the mask by NaN
+                            mask_data_nan = np.where(mask_data == 0, np.nan, mask_data)
                             
-                            # Create a new NIfTI image for the overlay
-                            overlay_image = nib.Nifti1Image(overlay, CT_img.affine)
+                            # Multiply the CT image by the mask
+                            final = CT_data * mask_data_nan
                             
-                            # Save the final overlay image in the output directory
+                            # Create a new NIfTI image with the result
+                            final_image = nib.Nifti1Image(final, CT_img.affine)
+                            
+                            # Save the final image in the output directory
                             output_path = os.path.join(output_directory, CT_filename)
-                            nib.save(overlay_image, output_path)
+                            nib.save(final_image, output_path)
                             
-                            print(f'Processed and saved overlay: {output_path}')
+
+                            print(f'Processed and saved: {output_path}')
+                            
                             break  # Exit after processing the first matching mask
+                            
 
                     break  # Break after processing the matching subdirectory
+                
+    
+          
 
 if __name__ == '__main__':
     
     CT_directory = 'Cropped_images/'
     mask_directory = 'Segmentation/'
-    output_directory = 'CT_mask_overlay/'
+    output_directory = 'CT_with_mask/'
+    
     
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     
-    create_overlay(CT_directory, mask_directory, output_directory)
+    mask_overlay(CT_directory, mask_directory, output_directory)
+
+        
+        
+            

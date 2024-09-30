@@ -1,6 +1,26 @@
 import os
 import nibabel as nib
-import numpy as np
+
+def get_image_dimensions(input_directory):
+    """
+    Get the dimensions of the first NIfTI file in a directory.
+    
+    Parameters:
+    input_directory (str): Path to the directory containing NIfTI files.
+    
+    Returns:
+    tuple: A tuple containing the dimensions (x, y, z) of the first NIfTI file.
+    """
+    for filename in os.listdir(input_directory):
+        if filename.endswith('.nii.gz'):
+            input_path = os.path.join(input_directory, filename)
+            
+            # Load the NIfTI image
+            img = nib.load(input_path)
+            img_x, img_y, img_z = img.shape
+            
+            return img_x, img_y, img_z
+        
 
 def crop_nifti_files(input_directory, output_directory, roi):
     """
@@ -13,17 +33,16 @@ def crop_nifti_files(input_directory, output_directory, roi):
     """
     x_start, x_end, y_start, y_end, z_start, z_end = roi
     
-
     # Loop through all NIfTI files in the input directory
     for filename in os.listdir(input_directory):
         if filename.endswith('.nii.gz'):
             input_path = os.path.join(input_directory, filename)
-            output_path = os.path.join(output_directory, os.path.splitext(filename)[0])
+            output_path = os.path.join(output_directory, filename)
             
             # Load the NIfTI image
             img = nib.load(input_path)
             data = img.get_fdata()
-
+            
             # Apply the same ROI cropping to each image
             cropped_data = data[x_start:x_end, y_start:y_end, z_start:z_end]
 
@@ -34,19 +53,25 @@ def crop_nifti_files(input_directory, output_directory, roi):
             nib.save(cropped_img, output_path)
 
             print(f'Cropped and saved: {output_path}')
-
+            
 
 if __name__ == '__main__':
     # Define input and output directories
-    input_directory = 'NIFTI_files/'
-    output_directory = 'Cropped_images/'
     
-    # Define the ROI to crop, find the values in 3D slicer
-    roi = (50, 450, 150, 450, 0, 200) # Possible values for heart, might be changed!  
+    #input_directory = 'NIFTI_files'
+    #output_directory = 'cropped_images'
+    input_directory = 'masks_andrea_uncropped/'
+    output_directory = 'ground_truth_masks/'
+    
+    # Get image dimensions from the first image in the directory
+    img_x, img_y, img_z = get_image_dimensions(input_directory)
+    
+    # Define the ROI based on the image dimensions
+    #roi = (50, 400, 125, 375, 0, 250)  # Adjust the values based on your needs
+    roi = (50, 400, 75, 325, 0, 250)
     
     # Call the function to crop all NIfTI files
     crop_nifti_files(input_directory, output_directory, roi)
-
 
 
 

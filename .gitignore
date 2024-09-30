@@ -1,5 +1,9 @@
 __pycache__/
-Cropped_images/
+cropped_images/
+CT_mask_overlay/
 CT_with_mask/
+data/
+ground_truth_masks/
+masks/
+masks_andrea_uncropped/
 NIFTI_files/
-Segmentation/
