@@ -95,5 +95,6 @@ if __name__ == '__main__':
     
     # Calculate Dice scores for all masks
     dice_scores, avg_dice = calculate_dice_scores(mask_directory, ground_truth_directory)
-    shape = resample_masks()
-    print(shape)
+    
+    resample_masks()
+    
