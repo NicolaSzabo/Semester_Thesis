@@ -2,6 +2,7 @@ import os
 import nibabel as nib
 import numpy as np
 
+
 def create_overlay(CT_directory, mask_directory, output_directory):
     """
     Create overlay of CT image with semi-transparent mask, darkening the background.
