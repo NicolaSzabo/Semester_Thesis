@@ -1,3 +1,6 @@
+# First file I created just to play around with the NIFTI files and plotting them. Not really important
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path

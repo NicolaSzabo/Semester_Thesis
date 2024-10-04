@@ -1,3 +1,9 @@
+# This file has 2 functions: get_image_dimensions(), crop_nifti_files().
+# The first function is used to get the dimensions of a NIFTI file located in the input directory.
+# The second function crops all NIFTI images located in a directory to a specified ROI. The cropped
+# images are safe in a declared output directory.
+
+
 import os
 import nibabel as nib
 
