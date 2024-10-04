@@ -1,3 +1,6 @@
+# This file has 1 function: segment_images().
+# It takes a NIFTI file as input and saves a binary mask for the declared object of interest.
+
 import nibabel as nib
 from totalsegmentator import python_api
 import torch
@@ -5,7 +8,7 @@ import os
 
 
 
-def segment_images(input_directory, output_directory, object_of_interst):
+def segment_images(input_directory, output_directory, object_of_interest):
     
     """
     Segmentate the cropped NIFTI files into objects of interest
