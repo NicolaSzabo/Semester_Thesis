@@ -8,7 +8,7 @@ import os
 
 
 
-def segment_images(input_directory, output_directory, object_of_interest):
+def segment_images(input_directory, output_directory): # when using the 'total' task, add: object_of_interest parameter
     
     """
     Segmentate the cropped NIFTI files into objects of interest
@@ -27,8 +27,9 @@ def segment_images(input_directory, output_directory, object_of_interest):
             
             # Run TotalSegmentator for each NIfTI file
             print(f'Processing file: {input_path}')
-            python_api.totalsegmentator(input_path, output_path, roi_subset = object_of_interest) # without GPU use: fastest = True
-            
+            python_api.totalsegmentator(input_path, output_path, task = 'heartchambers_highres') # without GPU use: fastest = True
+                                                                                                                                                  # for the whole heart use: task = 'total'
+                                                                                                                                                  # for the 'total' task, add roi_subset = object_of_interest as parameter
             
 
 if __name__ == '__main__':
@@ -36,10 +37,10 @@ if __name__ == '__main__':
     print(torch.cuda.is_available())
     
     input_directory = 'NIFTI_files/'
-    output_directory = 'masks/'
-    object_of_interest = ['heart']
+    output_directory = 'masks_heart_chambers/' # for the whole heart use: 'masks_heart/'
+    #object_of_interest = ['heart'] only need if doing the 'total' task
     
-    segment_images(input_directory, output_directory, object_of_interest)
+    segment_images(input_directory, output_directory) # add: object_of_interest when doing the task 'total'
     
     
  

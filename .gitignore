@@ -4,6 +4,7 @@ CT_mask_overlay/
 CT_with_mask/
 data/
 ground_truth_masks/
-masks/
 masks_andrea_uncropped/
+masks_heart/
+masks_heart_chambers/
 NIFTI_files/
