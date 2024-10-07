@@ -1,3 +1,6 @@
+# This file has 3 functions: resample_and_normalize_masks(), dice_score(), calculate_dice_scores().
+# The newly created masks from TotalSegmentator are compared with the 'older' masks with the DICE score
+
 import numpy as np
 import nibabel as nib
 import os
@@ -8,9 +11,14 @@ import nibabel as nib
 import numpy as np
 import nibabel.processing
 
-def resample_and_normalize_masks():
+def resample_and_normalize_masks(output_directory):
+    """
+    Received masks are normalized and resampled and saved in output directory.
+    Like this both the new masks and the 'older' masks are comparable.
+    """
+    
     # Load the original mask and the ground truth mask (with different resolution)
-    mask = nib.load('masks/16-1217_5_0_B31S.nii/heart.nii.gz')
+    mask = nib.load('masks_heart/16-1217_5_0_B31S.nii/heart.nii.gz')
     mask_andrea = nib.load('masks_andrea_uncropped/16-1217_label.nii.gz')
 
     # Get the data from Andreas' mask and normalize it (convert -3024 to 0)
@@ -35,7 +43,7 @@ def resample_and_normalize_masks():
     print('Original mask values:', np.unique(mask_data))
 
     # Optionally save the resampled ground truth mask if needed
-    nib.save(resampled_mask, 'ground_truth_masks/resampled_and_normalized_mask.nii.gz')
+    nib.save(resampled_mask, output_directory)
 
     print('Resampling and normalization done, new shape:', resampled_mask_data.shape)
 
@@ -87,7 +95,7 @@ def calculate_dice_scores(mask_directory, ground_truth_directory):
     
  
     predicted_mask_path = os.path.join(mask_directory, '16-1217_5_0_B31S.nii/heart.nii.gz')
-    ground_truth_mask_path = os.path.join(ground_truth_directory, 'resampled_and_normalized_mask.nii.gz')  
+    ground_truth_mask_path = os.path.join(ground_truth_directory, 'test.nii.gz')
             
             
     # Load the predicted and ground truth masks
@@ -115,12 +123,12 @@ def calculate_dice_scores(mask_directory, ground_truth_directory):
 
 if __name__ == '__main__':
     
-    mask_directory = 'masks/'  # Directory containing predicted segmentation masks
+    mask_directory = 'masks_heart/'  # Directory containing predicted segmentation masks
     ground_truth_directory = 'ground_truth_masks/'  # Directory containing ground truth masks
     
     
     # Run the function
-    resample_and_normalize_masks()  
+    resample_and_normalize_masks('ground_truth_masks/test.nii.gz')  
     
     
     # Calculate Dice scores for all masks

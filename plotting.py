@@ -1,4 +1,4 @@
-# First file I created just to play around with the NIFTI files and plotting them. Not really important
+# First file I created just to play around with the NIFTI files and plotting them. Not really important.
 
 
 import numpy as np
