@@ -33,6 +33,7 @@ def segment_images(input_directory, output_directory, object_of_interest):
             
 
 if __name__ == '__main__':
+    
     #Check if GPU is available
     print(torch.cuda.is_available())
     

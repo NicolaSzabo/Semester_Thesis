@@ -10,8 +10,8 @@ import nilearn as nil
 
 #Check data for being DICOM or not
 
-path_CT = 'cropped_images/16-1217_5_0_B31S.nii.gz'
-path_mask = 'masks/heart_16-1217.nii.gz'
+path_CT = 'NIFTI_files/16-1217_5_0_B31S.nii.gz'
+path_mask = 'masks_heart/16-1217_heart.nii.gz'
 
 
 # Load NIFTI file
@@ -49,7 +49,7 @@ plt.show()
 
 
 # Visualize a single slice with voxel spacing corrected
-slice_idx = 180  # Select a slice index
+slice_idx = 250  # Select a slice index
 
 plt.figure(figsize=[6, 6])
 

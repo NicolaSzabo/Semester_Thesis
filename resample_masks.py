@@ -29,7 +29,7 @@ def resample_and_normalize_masks(new_mask_directory, compare_mask_directory, out
     
         # Replace -3024 with 0 (background) and ensure that the mask is binary (0 and 1)
         mask_compare_data[mask_compare_data == -3024] = 0
-        mask_compare_data[mask_compare_data != 0] = 1  # Ensure the foreground remains 1
+        mask_compare_data[mask_compare_data != 0] = 1 
     
         # Create a new NIfTI image with the normalized data
         normalized_mask_compare = nib.Nifti1Image(mask_compare_data, mask_compare.affine)
