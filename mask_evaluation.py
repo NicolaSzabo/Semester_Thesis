@@ -4,8 +4,6 @@
 import numpy as np
 import nibabel as nib
 import os
-import nibabel.processing
-
 
 
     
@@ -26,7 +24,7 @@ def dice_score(mask, ground_truth_mask):
     mask = (mask > 0).astype(np.uint8)
     ground_truth_mask = (ground_truth_mask > 0).astype(np.uint8)
 
-    # Compute intersection and Dice score
+    # Formula for Dice score 
     intersection = np.sum(mask * ground_truth_mask)
     dice = (2. * intersection) / (np.sum(mask) + np.sum(ground_truth_mask))
     
@@ -49,7 +47,8 @@ def calculate_dice_scores(mask_directory, ground_truth_directory):
         float: The average Dice score across all segmentations.
     """
     
-    dice_scores = []  # List to store Dice scores
+    # List to store Dice scores
+    dice_scores = []  
     
     
     mask_files = [f for f in os.listdir(mask_directory) if f.endswith('.nii.gz')]

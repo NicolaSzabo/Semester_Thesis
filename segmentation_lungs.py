@@ -27,7 +27,7 @@ def segment_images(input_directory, output_directory, object_of_interest):
             
             # Run TotalSegmentator for each NIfTI file
             print(f'Processing file: {input_path}')
-            python_api.totalsegmentator(input_path, output_path, task = 'total', roi_subset = object_of_interest) # without GPU use: fastest = True
+            python_api.totalsegmentator(input_path, output_path, task = 'total', roi_subset = object_of_interest, fastest = True) # without GPU use: fastest = True
                                                                                                                                                 
                                                                                                                                                   
             
@@ -38,11 +38,11 @@ if __name__ == '__main__':
     print(torch.cuda.is_available())
     
     input_directory = 'NIFTI_files/'
-    output_directory = 'masks_heart/' 
-    object_of_interest = ['heart', 'aorta'] 
+    output_directory = 'masks_lungs/' 
+    object_of_interest = ['lung_upper_lobe_left', 
+                          'lung_lower_lobe_left', 
+                          'lung_upper_lobe_right', 
+                          'lung_middle_lobe_right', 
+                          'lung_lower_lobe_right'] 
     
     segment_images(input_directory, output_directory, object_of_interest) 
-    
-    
- 
-    

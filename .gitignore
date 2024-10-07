@@ -7,4 +7,5 @@ ground_truth_masks/
 masks_compare/
 masks_heart/
 masks_heart_chambers/
+masks_lungs/
 NIFTI_files/
