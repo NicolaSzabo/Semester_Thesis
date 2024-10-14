@@ -61,7 +61,7 @@ if __name__ == '__main__':
     mask_directory = 'masks_heart/'
     output_directory = 'masked_CT/'
     
-    
+
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
