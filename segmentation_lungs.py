@@ -27,7 +27,7 @@ def segment_images(input_directory, output_directory, object_of_interest):
             
             # Run TotalSegmentator for each NIfTI file
             print(f'Processing file: {input_path}')
-            python_api.totalsegmentator(input_path, output_path, task = 'total', roi_subset = object_of_interest, fastest = True) # without GPU use: fastest = True
+            python_api.totalsegmentator(input_path, output_path, task = 'total', roi_subset = object_of_interest) # without GPU use: fastest = True
                                                                                                                                                 
                                                                                                                                                   
             
