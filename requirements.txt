@@ -7,4 +7,5 @@ dcm2niix
 TotalSegmentator
 nibabel
 nilearn
+torch
 segmentation-mask-overlay

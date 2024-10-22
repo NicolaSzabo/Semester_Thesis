@@ -1,6 +1,4 @@
 __pycache__/
-cropped_images/
-CT_mask_overlay/
 data/
 ground_truth_masks/
 masked_CT/
