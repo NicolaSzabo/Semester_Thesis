@@ -1,8 +1,4 @@
 __pycache__/
-data/
-ground_truth_masks/
-masked_CT/
-masks_compare/
-masks_heart/
-masks_heart_chambers/
-masks_lungs/
+unhealthy_final/
+unhealthy_nifti/
+unhealthy_segmentation/

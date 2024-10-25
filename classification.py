@@ -14,70 +14,52 @@ from tqdm import tqdm
 from PIL import Image
 
 
-excel_file = 'data/PFFx_pred_data-800.xlsx'
-patient_df = pd.read_excel(excel_file)
-patient_df = patient_df[patient_df['images_exported'] == 'Yes']  # Filter only the rows with 'Yes'
-patient_df = patient_df.dropna(subset=['OP_type', 'side_affected'])  # Drop rows where these fields are empty
-
-patient_labels = patient_df.set_index('Pat_name')['OP_type'].to_dict()
-
 
 ######## Creating a Custom Dataset for our files
 # Create the Dataset class using Pytorch's Dataset class: Provides structure needed to load and handle data in an efficient manner. Once this is defined in can be passed to a Dataloader to go on with
 # batching, shuffling,...
 # More info here: https://pytorch.org/tutorials/beginner/basics/data_tutorial.html
 
-class HeartCTdataset(Dataset):
-    def __init__(self, img_dir, patient_labels, transform = None):
+
+
+class HeartCTDataset(Dataset):
+    def __init__(self, img_dir, transform = None):
         self.img_dir = img_dir
-        self.patient_labels = patient_labels
         self.transform = transform
-        self.img_files = [f for f in os.listdir(img_dir) if f.endswith('.nii.gz')] # list of image files
+        self.img_files = []
+        self.labels = []
+        
+        # Iterate over folders: 'healthy' (label 0) and 'unhealthy' (label 1)
+        for label, folder_name in enumerate(['healthy', 'unhealthy']):
+            folder_path = os.path.join(img_dir, folder_name)
+            files = [f for f in os.listdir(folder_path) if f.endswith('.nii.gz')]
+            self.img_files.extend([os.path.join(folder_path, f) for f in files])
+            self.labels.extend([label] * len(files))  # 0 for healthy, 1 for unhealthy
 
     def __len__(self):
-        return len(self.img_files) # returns number of images in the dataset
+        return len(self.img_files)
 
     def __getitem__(self, idx):
-        img_file = self.img_files[idx]
-        patient_id = '_'.join(img_file.split('_')[:3])  # Get patient ID
-        img_path = os.path.join(self.img_dir, img_file)
+        img_path = self.img_files[idx]
+        label = self.labels[idx]
         
+        # Load and preprocess the NIfTI image
         nii_img = nib.load(img_path)
         img_data = nii_img.get_fdata()
-
-        # Squeeze the unnecessary dimensions (from (1, 1, 2840) to (2840) for example)
-        img_data = np.squeeze(img_data)
-        
-        # Normalize the data to the [0, 255] range and convert to uint8
         img_data = (img_data - np.min(img_data)) / (np.max(img_data) - np.min(img_data)) * 255
         img_data = img_data.astype(np.uint8)
         
-        # If the image is still 2D (grayscale), expand it into 3 identical channels to represent RGB. This is done because
-        # the image processing library PIL expects 3 channels. The image is still grayscale, but shaped like an RGB image with
-        # 3 channels
+        # Convert grayscale to RGB
         if img_data.ndim == 2:
-            img_data = np.stack([img_data] * 3, axis=-1)  
-
-        # Conversion to PIL image:
-        # PIL is a library used for opening, manipulating and saving many different image file formats. It is used here to handle image data from a NIfTI
-        # format by converting it to a more familiar image format (RGB), which is commonly expected by image transformation functions in libraries like PyTorch
-        img = Image.fromarray(img_data)
+            img_data = np.stack([img_data] * 3, axis=-1)
         
+        img = Image.fromarray(img_data)
         
         if self.transform:
             img = self.transform(img)
-            
-            
-        label = self.patient_labels.get(patient_id, 'Unknown')
-            
-        # Skip any samples where label is 'Unknown'
-        if label == 'Unknown':
-            return self.__getitem__((idx + 1) % len(self.img_files))  # Fetch the next sample
-    
-        label_mapping = {'Prosthesis': 0, 'Nail': 1, 'Osteosynthesis': 2}
-        label = torch.tensor(label_mapping[label])
         
-        return img, label # return as tuple (img, label): img is the transformed image tensor and label is the corresponding label for the patient
+        label = torch.tensor(label)  # Convert label to tensor
+        return img, label
 
 
 # Image Transformations
@@ -93,7 +75,7 @@ transform = transforms.Compose([
 
 # Loading the full dataset
 data_dir = "data/"
-dataset = XrayDataset(img_dir = data_dir, patient_labels = patient_labels, transform = transform)
+dataset = HeartCTDataset(img_dir = data_dir, transform = transform)
 len_dataset = len(dataset)
 
 
@@ -121,6 +103,8 @@ test_size = len(dataset) - train_size - val_size
 train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 
 
+
+
 # Create data loaders for our training, validation and test datasets. The DataLoader class is used to load data in batches, making it more efficient for training and evaluation
 
 batch_size = 32 # Each batch contrains 32 samples. TODO: maybe adjust it so the memory usage and training speed can be affected
@@ -134,19 +118,26 @@ test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle = False,
 device = "cuda" if torch.cuda.is_available() else "cpu" # Checks if GPU is available, uses it if yes
 print(f"Using device: {device}")
 
+
 # Load a pre-trained ResNet model
 model = models.efficientnet_b0(weights = True) # TODO: check if we do pretrained = False or True
+
+
+
 # Classifier is a sequential module (including dropout layer or other intermediate layers) representing a fully connected layer. 
 # Classifier[1] is the final linear classification layer.
 # .in_features is the number of input features a fully connected (nn.Linear) layer expects. This value is used on the next line to initialize 
 # a new linear layer to classify into the 3 classes
 num_features = model.classifier[1].in_features 
-model.classifier[1] = nn.Linear(num_features, 3)  # 3 classes: Nails, Osteosynthesis, Prosthesis
+model.classifier[1] = nn.Linear(num_features, 2)  # 2 classes: healthy and unhealthy
 model = model.to(device) # Move model's parameters to device
+
+
 
 criterion = nn.CrossEntropyLoss() # TODO: adapt the loss function? CrossEntropyLoss is generally suitable for multi-class classification
 lr = 0.00001 # learning rate for the optimizer TODO: may also be adjusted. Can affect convergence and model performance
 optimizer = torch.optim.Adam(model.parameters(), lr=lr) # TODO: adapt the optimizer? Alternative might be SGD
+
 
 # Sets up the logging for TensorBoard (helps to visualize the training process). SummaryWriter creates log files that can be opened with TensorBoard, log_dir stores the logs with unique timestamp
 log_dir = f"runs/surgical_classification/experiment_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -236,7 +227,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, num_epoch
 ######## Train the model
 
 #num_epochs = 35 
-num_epochs = 5 # TODO how many epochs?
+num_epochs = 35 # TODO how many epochs?
 trained_model = train_model(model = model, train_loader = train_loader,
                             val_loader = val_loader, criterion = criterion,
                             optimizer = optimizer, num_epochs = num_epochs)

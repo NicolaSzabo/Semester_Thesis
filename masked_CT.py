@@ -76,7 +76,7 @@ def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, t
         patient_id = CT_filename[:7]  # Extract patient ID (first 7 characters) e.g., '11-1382'
 
         # Locate the corresponding mask subdirectory for the patient
-        mask_subdirectory = os.path.join(mask_directory, f"{patient_id}_heart_aorta")
+        mask_subdirectory = os.path.join(mask_directory, f"{patient_id}_heart_aorta.nii.gz")
 
         if os.path.isdir(mask_subdirectory):
             # Combine the heart and aorta masks
@@ -113,13 +113,20 @@ def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, t
 
 if __name__ == '__main__':
 
-    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_nifti'  # Directory with CT images
-    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_segmentation'  # Directory with heart and aorta masks in subfolders
-    output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_final'  # Output directory for masked CT images
-    target_depth = 128  # Set your target depth along the z-axis
+    #CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_nifti'  # Directory with CT images
+    CT_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_nifti'
+
+    #mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_segmentation'  # Directory with heart and aorta masks in subfolders
+    mask_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_segmentation'
+
+    #output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_final'  # Output directory for masked CT images
+    output_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_final'
+
+
+    target_depth = 240  # Set your target depth along the z-axis
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    mask_overlay(CT_directory, mask_directory, output_directory, label_suffix = 'unhealthy', target_depth=target_depth)
+    mask_overlay(CT_directory, mask_directory, output_directory, label_suffix = 'unhealthy', target_depth = target_depth)
