@@ -29,6 +29,11 @@ from monai.utils import set_determinism
 
 #print_config()
 
+if torch.cuda.is_available():
+    print('GPU is available. Device in use: ')
+    print(torch.cuda.get_device_name(0))
+else: 
+    print('No GPU available. Using CPU instead.')    
 
 
 ### Set deterministic training for reproducibility
@@ -49,7 +54,10 @@ image_files = [
     [os.path.join(data_dir, class_names[i], x) for x in os.listdir(os.path.join(data_dir, class_names[i]))]
     for i in range(num_class)
 ]
-num_each = [len(image_files[i]) for i in range(num_class)]
+
+num_each = [len(image_files[i]) for i in range(num_class)] # List of integers, each representing the number of images in a class
+
+# Combine all images and classes into a single listJust
 image_files_list = []
 image_class = []
 for i in range(num_class):
@@ -144,13 +152,13 @@ class HeartClassification(torch.utils.data.Dataset):
 
 
 train_ds = HeartClassification(train_x, train_y, train_transforms)
-train_loader = DataLoader(train_ds, batch_size = 300, shuffle = True, num_workers = 2)
+train_loader = DataLoader(train_ds, batch_size = 1, shuffle = True, num_workers = 0)
 
 val_ds = HeartClassification(val_x, val_y, val_transforms)
-val_loader = DataLoader(val_ds, batch_size = 300, num_workers = 2)
+val_loader = DataLoader(val_ds, batch_size = 1, num_workers = 0)
 
 test_ds = HeartClassification(test_x, test_y, val_transforms)
-test_loader = DataLoader(test_ds, batch_size = 300, num_workers = 2)
+test_loader = DataLoader(test_ds, batch_size = 1, num_workers = 0)
 
 
 
@@ -158,7 +166,7 @@ test_loader = DataLoader(test_ds, batch_size = 300, num_workers = 2)
 
 ### Define network and optimizer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = DenseNet121(spatial_dims = 2, in_channels = 1, out_channels = num_class).to(device)
+model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class).to(device)
 loss_function = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), 1e-5)
 max_epochs = 4

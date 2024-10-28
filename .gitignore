@@ -1,4 +1,3 @@
 __pycache__/
-unhealthy_final/
-unhealthy_nifti/
-unhealthy_segmentation/
+data/
+runs/
