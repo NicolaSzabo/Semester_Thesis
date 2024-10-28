@@ -2,34 +2,31 @@ import nibabel as nib
 import numpy as np
 import os
 
-def adjust_dimensions(data, target_depth, center = True):
+def adjust_dimensions(data, target_depth):
     """
-    Adjust the z-axis of the data to focus on the heart region depth.
-    Crops to a region around the center if center=True.
-
+    Adjust the z-axis of the data to a target depth.
+    Crops if current depth is greater than target depth, or pads if less.
     Args:
         data (np.ndarray): The input 3D array (CT or mask) to be adjusted.
-        target_depth (int): Desired depth along the z-axis.
-        center (bool): If True, crops around the center of z-axis.
-
+        target_depth (int): The desired depth along the z-axis.
     Returns:
-        np.ndarray: The adjusted data focusing on the heart region.
+        np.ndarray: The adjusted data with the specified z-axis depth.
     """
     current_depth = data.shape[2]
-    
-    # Crop to the center region for the heart
-    if center and current_depth > target_depth:
+
+    # Crop the z-axis if it exceeds target depth
+    if current_depth > target_depth:
         start = (current_depth - target_depth) // 2
         adjusted_data = data[:, :, start:start + target_depth]
-    elif current_depth > target_depth:
-        adjusted_data = data[:, :, :target_depth]  # Regular cropping if center is False
+
+    # Pad the z-axis if it's less than target depth
     elif current_depth < target_depth:
         pad_before = (target_depth - current_depth) // 2
         pad_after = target_depth - current_depth - pad_before
-        adjusted_data = np.pad(data, ((0, 0), (0, 0), (pad_before, pad_after)), mode = 'constant', constant_values = 0)
+        adjusted_data = np.pad(data, ((0, 0), (0, 0), (pad_before, pad_after)), mode='constant', constant_values=0)
     else:
         adjusted_data = data  # No adjustment needed if depth matches
-    
+
     return adjusted_data
 
 
@@ -114,10 +111,10 @@ def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, t
 
 if __name__ == '__main__':
 
-    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/healthy_nifti'  # Directory with CT images
+    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/healthy_nifti'  # Directory with CT images
     #CT_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_nifti'
 
-    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/healthy_segmentation'  # Directory with heart and aorta masks in subfolders
+    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/healthy_segmentation'  # Directory with heart and aorta masks in subfolders
     #mask_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_segmentation'
 
     output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/healthy_final'  # Output directory for masked CT images

@@ -44,7 +44,7 @@ set_determinism(seed = 0)
 
 # for Mac:  '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/data/data_classification'
 # for Linux: '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
-data_dir = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/data/data_classification'
+data_dir = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
 
 class_names = sorted(x for x in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, x)))
 num_class = len(class_names)
@@ -168,7 +168,8 @@ test_loader = DataLoader(test_ds, batch_size = 1, num_workers = 0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class).to(device)
 loss_function = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), 1e-5)
+learning_rate = 0.001
+optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 max_epochs = 4
 val_interval = 1
 auc_metric = ROCAUCMetric()
