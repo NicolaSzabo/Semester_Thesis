@@ -1,4 +1,5 @@
 import os
+import gc
 import shutil
 import tempfile
 import matplotlib.pyplot as plt
@@ -24,16 +25,28 @@ from monai.transforms import (
     RandRotate,
     RandZoom,
     ScaleIntensity,
+    Resize
 )
 from monai.utils import set_determinism
 
 #print_config()
+print(torch.version.cuda)
+
 
 if torch.cuda.is_available():
     print('GPU is available. Device in use: ')
     print(torch.cuda.get_device_name(0))
 else: 
-    print('No GPU available. Using CPU instead.')    
+    print('No GPU available. Using CPU instead.')
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+print(os.environ.get("PYTORCH_CUDA_ALLOC_CONF"))
+
+torch.cuda.empty_cache()
+gc.collect()
+
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # Disables OpenCV GUI dependencies
+
 
 
 ### Set deterministic training for reproducibility
@@ -45,6 +58,7 @@ set_determinism(seed = 0)
 # for Mac:  '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/data/data_classification'
 # for Linux: '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
 data_dir = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
+root_dir = '/home/fit_member/Documents/NS_SemesterWork/Semester_Thesis'
 
 class_names = sorted(x for x in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, x)))
 num_class = len(class_names)
@@ -74,6 +88,16 @@ print(f"Total image count: {num_total}")
 print(f"Image dimensions: {image_shape}")
 print(f"Label names: {class_names}")
 print(f"Label counts: {num_each}")
+
+
+data = nib.load(image_files_list[0]).get_fdata()
+print("Data min:", data.min(), "Data max:", data.max())
+for file in image_files_list:
+    data = nib.load(file).get_fdata()
+    if np.isnan(data).any():
+        print(f"NaNs found in {file}")
+
+
 
 
 ### Randomly pick images from the dataset to visualize and check
@@ -126,13 +150,19 @@ train_transforms = Compose(
         LoadImage(image_only = True),
         EnsureChannelFirst(),
         ScaleIntensity(),
+        Resize((128, 128, 128)),
         RandRotate(range_x = np.pi / 12, prob = 0.5, keep_size = True),
         RandFlip(spatial_axis = 0, prob = 0.5),
         RandZoom(min_zoom = 0.9, max_zoom = 1.1, prob = 0.5),
     ]
 )
 
-val_transforms = Compose([LoadImage(image_only = True), EnsureChannelFirst(), ScaleIntensity()])
+val_transforms = Compose([LoadImage(image_only = True),
+                          EnsureChannelFirst(),
+                          ScaleIntensity(),
+                          Resize((128, 128, 128)),
+    ]
+)
 
 y_pred_trans = Compose([Activations(softmax = True)])
 y_trans = Compose(AsDiscrete(to_onehot = num_class))
@@ -170,7 +200,7 @@ model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class)
 loss_function = torch.nn.CrossEntropyLoss()
 learning_rate = 0.001
 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
-max_epochs = 4
+epochs = 4
 val_interval = 1
 auc_metric = ROCAUCMetric()
 
@@ -186,9 +216,9 @@ epoch_loss_values = []
 metric_values = []
 writer = SummaryWriter()
 
-for epoch in range(max_epochs):
+for epoch in range(epochs):
     print("-" * 10)
-    print(f"epoch {epoch + 1}/{max_epochs}")
+    print(f"epoch {epoch + 1}/{epochs}")
     model.train()
     epoch_loss = 0
     step = 0
@@ -232,7 +262,7 @@ for epoch in range(max_epochs):
             if result > best_metric:
                 best_metric = result
                 best_metric_epoch = epoch + 1
-                torch.save(model.state_dict(), os.path.join(root_dir, "best_metric_model.pth"))
+                torch.save(model.state_dict(), os.path.join(root_dir, "heart_classification.pth"))
                 print("saved new best metric model")
             print(
                 f"current epoch: {epoch + 1} current AUC: {result:.4f}"
@@ -269,7 +299,7 @@ plt.show()
 
 
 ### Evaluate the model on the test dataset
-model.load_state_dict(torch.load(os.path.join(data_dir, "heart_classification.pth")))
+model.load_state_dict(torch.load(os.path.join(root_dir, "heart_classification.pth")))
 model.eval()
 y_true = []
 y_pred = []

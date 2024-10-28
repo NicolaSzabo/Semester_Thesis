@@ -78,17 +78,16 @@ def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, t
 
         if os.path.isdir(mask_subdirectory):
             # Combine the heart and aorta masks
-            combined_mask_data = combine_masks(mask_subdirectory)
+            combined_mask = combine_masks(mask_subdirectory)
 
             # Load the CT image
             CT_img = nib.load(CT_path)
             CT_data = CT_img.get_fdata()
 
-            # Replace 0 in the combined mask with NaN
-            combined_mask_nan = np.where(combined_mask_data == 0, np.nan, combined_mask_data)
+
 
             # Multiply the CT image by the combined mask (keeping only the regions of interest)
-            final = CT_data * combined_mask_nan
+            final = CT_data * combined_mask
 
             # Adjust both the CT and the combined mask along the z-axis to match target depth
             final_adjusted = adjust_dimensions(final, target_depth)
@@ -111,20 +110,20 @@ def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, t
 
 if __name__ == '__main__':
 
-    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/healthy_nifti'  # Directory with CT images
+    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_nifti'  # Directory with CT images
     #CT_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_nifti'
 
-    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/healthy_segmentation'  # Directory with heart and aorta masks in subfolders
+    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_segmentation'  # Directory with heart and aorta masks in subfolders
     #mask_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_segmentation'
 
-    output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/healthy_final'  # Output directory for masked CT images
+    output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/unhealthy_final'  # Output directory for masked CT images
     #output_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_final'
 
 
-    target_depth = 300  # Set your target depth along the z-axis
+    target_depth = 750  # Set your target depth along the z-axis
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    mask_overlay(CT_directory, mask_directory, output_directory, label_suffix = 'healthy', target_depth = target_depth)
+    mask_overlay(CT_directory, mask_directory, output_directory, label_suffix = 'unhealthy', target_depth = target_depth)
