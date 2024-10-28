@@ -2,30 +2,31 @@ import nibabel as nib
 import numpy as np
 import os
 
-def adjust_dimensions(data, target_depth):
+def adjust_dimensions(data, target_depth, center = True):
     """
-    Adjust the z-axis of the data to a target depth.
-    Crops if current depth is greater than target depth, or pads if less.
+    Adjust the z-axis of the data to focus on the heart region depth.
+    Crops to a region around the center if center=True.
 
     Args:
         data (np.ndarray): The input 3D array (CT or mask) to be adjusted.
-        target_depth (int): The desired depth along the z-axis.
+        target_depth (int): Desired depth along the z-axis.
+        center (bool): If True, crops around the center of z-axis.
 
     Returns:
-        np.ndarray: The adjusted data with the specified z-axis depth.
+        np.ndarray: The adjusted data focusing on the heart region.
     """
     current_depth = data.shape[2]
     
-    # Crop the z-axis if it exceeds target depth
-    if current_depth > target_depth:
+    # Crop to the center region for the heart
+    if center and current_depth > target_depth:
         start = (current_depth - target_depth) // 2
         adjusted_data = data[:, :, start:start + target_depth]
-        
-    # Pad the z-axis if it's less than target depth
+    elif current_depth > target_depth:
+        adjusted_data = data[:, :, :target_depth]  # Regular cropping if center is False
     elif current_depth < target_depth:
         pad_before = (target_depth - current_depth) // 2
         pad_after = target_depth - current_depth - pad_before
-        adjusted_data = np.pad(data, ((0, 0), (0, 0), (pad_before, pad_after)), mode='constant', constant_values=0)
+        adjusted_data = np.pad(data, ((0, 0), (0, 0), (pad_before, pad_after)), mode = 'constant', constant_values = 0)
     else:
         adjusted_data = data  # No adjustment needed if depth matches
     
@@ -123,7 +124,7 @@ if __name__ == '__main__':
     #output_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_final'
 
 
-    target_depth = 750  # Set your target depth along the z-axis
+    target_depth = 300  # Set your target depth along the z-axis
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
