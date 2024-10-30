@@ -7,6 +7,7 @@ import nibabel as nib
 import PIL
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import Dataset
 import numpy as np
 from sklearn.metrics import classification_report
 import monai.transforms as mt
@@ -168,7 +169,7 @@ y_pred_trans = Compose([Activations(softmax = True)])
 y_trans = Compose(AsDiscrete(to_onehot = num_class))
 
 
-class HeartClassification(torch.utils.data.Dataset):
+class HeartClassification(Dataset):
     def __init__(self, image_files, labels, transforms):
         self.image_files = image_files
         self.labels = labels
@@ -195,7 +196,7 @@ test_loader = DataLoader(test_ds, batch_size = 1, num_workers = 0)
 
 
 ### Define network and optimizer
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class).to(device)
 loss_function = torch.nn.CrossEntropyLoss()
 learning_rate = 0.001
