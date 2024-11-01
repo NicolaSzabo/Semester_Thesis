@@ -108,8 +108,7 @@ set_determinism(seed = 0)
 
 ### Read image filenames from the dataset folders
 
-# for Mac:  '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/data/data_classification'
-# for Linux: '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
+
 data_dir = config.dataset.data_dir
 
 class_names = sorted(x for x in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, x)))
@@ -274,6 +273,9 @@ auc_metric = ROCAUCMetric()
 
 # Sets up the logging for TensorBoard (helps to visualize the training process). SummaryWriter creates log files that can be opened with TensorBoard, log_dir stores the logs with unique timestamp
 log_dir = f"'/home/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}"
+# for linux: f"'/home/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}"
+# for windows: f"'C:/Users/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}"
+
 writer = SummaryWriter(log_dir = log_dir)
 
 
@@ -334,7 +336,7 @@ def train_model(model, train_loader, val_loader, epochs, loss_function, optimize
             if result > best_metric:
                 best_metric = result
                 best_metric_epoch = epoch + 1
-                torch.save(model.state_dict(), f"'/home/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}.pth")
+                torch.save(model.state_dict(), model_save_path)
                 print("Saved new best metric model")
 
             print(f"Validation AUC: {result:.4f}, Accuracy: {acc_value:.4f}, Best AUC: {best_metric:.4f} at Epoch: {best_metric_epoch}")    
