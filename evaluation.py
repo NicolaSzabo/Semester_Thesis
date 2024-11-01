@@ -11,7 +11,7 @@ from omegaconf import OmegaConf
 
 # Specify the paths to the configuration and model files
 config_path = '/home/fit_member/Documents/NS_SemesterWork/config.yaml'
-model_path = '/home/fit_member/Documents/NS_SemesterWork/best_model.pth'  # Replace with the actual filename
+model_path = '/home/fit_member/Documents/NS_SemesterWork/best_model.pth' 
 
 # Load configuration
 config = OmegaConf.load(config_path)

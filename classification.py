@@ -61,14 +61,24 @@ os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # Disables OpenCV GUI dependen
 
 ### Using OmegaConf to load the configuration file and automatically print the hyperparameters
 
+start_time = datetime.now()
+start_time_str = start_time.strftime('%Y-%d-%m_%H-%M')
+model_filename = f"heart_classification_{datetime.now().strftime('%Y-%d-%m_%H-%M')}.pth"
+model_save_path = f"'/home/fit_member/Documents/NS_SemesterWork/{model_filename}"
+
+
+
 config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/config.yaml')
 print(OmegaConf.to_yaml(config))
 
 # Function to log configuration and metrics to a YAML file
-def log_results(config, test_loss, test_acc, file_path = '/home/fit_member/Documents/NS_SemesterWork/results_log.yaml'):
+def log_results(config, test_loss, test_acc, model_filename, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/results_log.yaml'):
     timestamp = datetime.now().strftime('%Y-%d-%m_%H-%M')
     results = {
+        'model_filename': model_filename,
         'run_id': f"\nRun_{timestamp}",
+        'start_time': start_time,
+        'end_time': end_time,
         'config': config,
         'results': {
             'test_loss': float(test_loss),
@@ -423,10 +433,13 @@ test_loss, test_acc, y_true, y_pred = evaluate_model(trained_model, test_loader,
 print(f'Final Test Loss: {test_loss:.4f}, Final Test Accuracy: {test_acc:.4f}')
 
 
-
+end_time = datetime.now()
+end_time_str = end_time.strftime('%Y-%d-%m_%H-%M')
+duration = end_time - start_time
+duration_str = str(duration)
 
 
 # Log results to YAML
-log_results(config = config, test_loss = test_loss, test_acc = test_acc)
+log_results(config = config, test_loss = test_loss, test_acc = test_acc, start_time = start_time_str, end_time = end_time_str, duration = duration_str, model_filename = model_filename)
 
 writer.close()
