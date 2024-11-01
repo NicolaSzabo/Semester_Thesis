@@ -29,6 +29,9 @@ from monai.transforms import (
     Resize
 )
 from monai.utils import set_determinism
+from omegaconf import OmegaConf
+from datetime import datetime
+
 
 #print_config()
 print(torch.version.cuda)
@@ -50,16 +53,54 @@ os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"  # Disables OpenCV GUI dependen
 
 
 
+
+
+
+
+
+
+### Using OmegaConf to load the configuration file and automatically print the hyperparameters
+
+config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/config.yaml')
+print(OmegaConf.to_yaml(config))
+
+# Function to log configuration and metrics to a YAML file
+def log_results(config, test_loss, test_acc, file_path = '/home/fit_member/Documents/NS_SemesterWork/results_log.yaml'):
+    timestamp = datetime.now().strftime('%Y-%d-%m_%H-%M')
+    results = {
+        'run_id': f"\nRun_{timestamp}",
+        'config': config,
+        'results': {
+            'test_loss': float(test_loss),
+            'test_accuracy': float(test_acc),
+        }
+    }
+    with open(file_path, 'a') as f:
+        OmegaConf.save(config = OmegaConf.create(results), f = f)
+
+
+
+
+
+
+
+
 ### Set deterministic training for reproducibility
 set_determinism(seed = 0)
+
+
+
+
+
+
+
 
 
 ### Read image filenames from the dataset folders
 
 # for Mac:  '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/data/data_classification'
 # for Linux: '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
-data_dir = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification'
-root_dir = '/home/fit_member/Documents/NS_SemesterWork/Semester_Thesis'
+data_dir = config.dataset.data_dir
 
 class_names = sorted(x for x in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, x)))
 num_class = len(class_names)
@@ -117,6 +158,9 @@ plt.show()
 
 
 
+
+
+
 ### Prepare training, validation and test data lists
 val_frac = 0.1
 test_frac = 0.1
@@ -145,13 +189,15 @@ print(f"Training count: {len(train_x)}, Validation count: {len(val_x)}, Test cou
 
 
 
+
+
 ### Define the MONAI transforms for data preprocessing and augmentation
 train_transforms = Compose(
     [
         LoadImage(image_only = True),
         EnsureChannelFirst(),
         ScaleIntensity(),
-        Resize((128, 128, 128)),
+        Resize((256, 256, 512)),
         RandRotate(range_x = np.pi / 12, prob = 0.5, keep_size = True),
         RandFlip(spatial_axis = 0, prob = 0.5),
         RandZoom(min_zoom = 0.9, max_zoom = 1.1, prob = 0.5),
@@ -182,14 +228,21 @@ class HeartClassification(Dataset):
         return self.transforms(self.image_files[index]), self.labels[index]
 
 
+batch_size = config.dataset.batch_size
+num_workers = config.dataset.num_workers
+
 train_ds = HeartClassification(train_x, train_y, train_transforms)
-train_loader = DataLoader(train_ds, batch_size = 1, shuffle = True, num_workers = 0)
+train_loader = DataLoader(train_ds, batch_size, shuffle = True, num_workers)
 
 val_ds = HeartClassification(val_x, val_y, val_transforms)
-val_loader = DataLoader(val_ds, batch_size = 1, num_workers = 0)
+val_loader = DataLoader(val_ds, batch_size, num_workers)
 
 test_ds = HeartClassification(test_x, test_y, val_transforms)
-test_loader = DataLoader(test_ds, batch_size = 1, num_workers = 0)
+test_loader = DataLoader(test_ds, batch_size, num_workers)
+
+
+
+
 
 
 
@@ -199,9 +252,9 @@ test_loader = DataLoader(test_ds, batch_size = 1, num_workers = 0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class).to(device)
 loss_function = torch.nn.CrossEntropyLoss()
-learning_rate = 0.001
+learning_rate = config.training.learning_rate
 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
-epochs = 4
+epochs = config.training.epochs
 val_interval = 1
 auc_metric = ROCAUCMetric()
 
@@ -209,110 +262,171 @@ auc_metric = ROCAUCMetric()
 
 
 
+# Sets up the logging for TensorBoard (helps to visualize the training process). SummaryWriter creates log files that can be opened with TensorBoard, log_dir stores the logs with unique timestamp
+log_dir = f"'/home/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}"
+writer = SummaryWriter(log_dir = log_dir)
 
-### Model training
-best_metric = -1
-best_metric_epoch = -1
-epoch_loss_values = []
-metric_values = []
-writer = SummaryWriter()
 
-for epoch in range(epochs):
-    print("-" * 10)
-    print(f"epoch {epoch + 1}/{epochs}")
-    model.train()
-    epoch_loss = 0
-    step = 0
-    for batch_data in train_loader:
-        step += 1
-        inputs, labels = batch_data[0].to(device), batch_data[1].to(device)
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = loss_function(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        epoch_loss += loss.item()
-        print(f"{step}/{len(train_ds) // train_loader.batch_size}, " f"train_loss: {loss.item():.4f}")
-        epoch_len = len(train_ds) // train_loader.batch_size
-        writer.add_scalar("train_loss", loss.item(), epoch_len * epoch + step)
-    epoch_loss /= step
-    epoch_loss_values.append(epoch_loss)
-    print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
 
-    if (epoch + 1) % val_interval == 0:
-        model.eval()
-        with torch.no_grad():
-            y_pred = torch.tensor([], dtype=torch.float32, device=device)
-            y = torch.tensor([], dtype=torch.long, device=device)
-            for val_data in val_loader:
-                val_images, val_labels = (
-                    val_data[0].to(device),
-                    val_data[1].to(device),
-                )
-                y_pred = torch.cat([y_pred, model(val_images)], dim=0)
-                y = torch.cat([y, val_labels], dim=0)
-            y_onehot = [y_trans(i) for i in decollate_batch(y, detach=False)]
-            y_pred_act = [y_pred_trans(i) for i in decollate_batch(y_pred)]
-            auc_metric(y_pred_act, y_onehot)
-            result = auc_metric.aggregate()
-            auc_metric.reset()
-            del y_pred_act, y_onehot
+
+
+
+
+### Training loop for the model
+
+def train_model(model, train_loader, val_loader, epochs, loss_function, optimizer, val_interval, device):
+    best_metric = -1
+    best_metric_epoch = -1
+    epoch_loss_values = []
+    metric_values = []
+    writer = SummaryWriter()
+
+    for epoch in range(epochs):
+        print(f"Epoch {epoch + 1}/{epochs}")
+
+        model.train()
+        running_loss = 0.0
+
+        for step, batch_data in enumerate(train_loader):
+            inputs, labels = batch_data[0].to(device), batch_data[1].to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = loss_function(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+
+            # Log the loss for each batch
+            writer.add_scalar("Train Loss", loss.item(), epoch * len(train_loader) + step)
+            print(f"Batch {step + 1}/{len(train_loader)}, Loss: {loss.item():.4f}")
+
+        # Calculate and log the average loss for the epoch
+        epoch_loss = running_loss / len(train_loader)
+        epoch_loss_values.append(epoch_loss)
+        print(f"Epoch {epoch + 1} Average Loss: {epoch_loss:.4f}")
+
+        if (epoch + 1) % val_interval == 0:
+            model.eval()
+            y_pred = torch.tensor([], dtype = torch.float32, device = device)
+            y_true = torch.tensor([], dtype = torch.long, device = device)
+            with torch.no_grad():
+                for val_data in val_loader:
+                    val_images, val_labels = val_data[0].to(device), val_data[1].to(device)
+                    y_pred = torch.cat([y_pred, model(val_images)], dim = 0)
+                    y_true = torch.cat([y_true, val_labels], dim = 0)
+
+            # Calculate accuracy and AUC
+            result = auc_metric(y_pred, y_true)
+            acc_value = torch.eq(y_pred.argmax(dim = 1), y_true).float().mean().item()
             metric_values.append(result)
-            acc_value = torch.eq(y_pred.argmax(dim=1), y)
-            acc_metric = acc_value.sum().item() / len(acc_value)
+
             if result > best_metric:
                 best_metric = result
                 best_metric_epoch = epoch + 1
-                torch.save(model.state_dict(), os.path.join(root_dir, "heart_classification.pth"))
-                print("saved new best metric model")
-            print(
-                f"current epoch: {epoch + 1} current AUC: {result:.4f}"
-                f" current accuracy: {acc_metric:.4f}"
-                f" best AUC: {best_metric:.4f}"
-                f" at epoch: {best_metric_epoch}"
-            )
-            writer.add_scalar("val_accuracy", acc_metric, epoch + 1)
+                torch.save(model.state_dict(), f"'/home/fit_member/Documents/NS_SemesterWork/_{datetime.now().strftime('%Y-%d-%m_%H-%M')}.pth")
+                print("Saved new best metric model")
 
-print(f"train completed, best_metric: {best_metric:.4f} " f"at epoch: {best_metric_epoch}")
+            print(f"Validation AUC: {result:.4f}, Accuracy: {acc_value:.4f}, Best AUC: {best_metric:.4f} at Epoch: {best_metric_epoch}")    
+
+
+            writer.add_scalar("Validation AUC", result, epoch + 1)
+            writer.add_scalar("Validation Accuracy", acc_value, epoch + 1)
+
+    return model, epoch_loss_values, metric_values
+
+
+
+
+
+
+
+def evaluate_model(model, test_loader, device):
+    model.eval()
+    correct_test = 0.0
+    total_test = 0.0
+    running_loss_test = 0.0
+    criterion = torch.nn.CrossEntropyLoss()
+
+    y_true, y_pred = [], []
+
+    with torch.no_grad():
+        for inputs_labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss_test += loss.item() * inputs.size(0)
+            _, preds = torch.max(outputs, 1)
+
+            # Collecting predictions and true labels for classification report
+            y_true.extend(labels.cpu().numpy())
+            y_pred.extend(preds.cpu().numpy())
+
+            # Calculating accuracy
+            correct_test += (preds == labels).sum().item()
+            total_test += labels.size(0)
+
+    test_loss = running_loss_test / len(test_loader.dataset)
+    test_acc = correct_test / total_test
+
+        
+    return test_loss, test_acc, y_true, y_pred
+
+
+
+
+
+
+
+
+def plot_metrics(epoch_loss_values, metric_values, val_interval):
+    plt.figure("Train Metrics", (12, 6))
+    plt.subplot(1, 2, 1)
+    plt.title("Epoch Average Loss")
+    plt.plot(range(1, len(epoch_loss_values) + 1), epoch_loss_values, label = 'Train Loss')
+    plt.xlabel("Epoch")
+   
+
+    plt.subplot(1, 2, 2)
+    plt.title("Validation AUC")
+    plt.plot([val_interval * (i + 1) for i in range(len(metric_values))], metric_values, label = 'Val AUC')
+    plt.xlabel("Epoch")
+
+    plt.legend()
+    plt.show()
+
+
+
+
+
+########### Train the model
+trained_model, epoch_loss_values, metric_values = train_model(
+    model = model,
+    train_loader = train_loader,
+    val_loader = val_loader,
+    optimizer = optimizer,
+    loss_function = loss_function,
+    epochs = epochs,
+    val_interval = val_interval,
+    device = device,
+)
+
+
+
+######## Plot training metrics
+plot_metrics(epoch_loss_values, metric_values, val_interval)
+
+
+
+######## Evaluate on the test dataset
+test_loss, test_acc, y_true, y_pred = evaluate_model(trained_model, test_loader, device)
+print(f'Final Test Loss: {test_loss:.4f}, Final Test Accuracy: {test_acc:.4f}')
+
+
+
+
+
+# Log results to YAML
+log_results(config = config, test_loss = test_loss, test_acc = test_acc)
+
 writer.close()
-
-
-
-
-
-### Plot the loss and metric values
-plt.figure("train", (12, 6))
-plt.subplot(1, 2, 1)
-plt.title("Epoch Average Loss")
-x = [i + 1 for i in range(len(epoch_loss_values))]
-y = epoch_loss_values
-plt.xlabel("epoch")
-plt.plot(x, y)
-plt.subplot(1, 2, 2)
-plt.title("Val AUC")
-x = [val_interval * (i + 1) for i in range(len(metric_values))]
-y = metric_values
-plt.xlabel("epoch")
-plt.plot(x, y)
-plt.show()
-
-
-
-
-### Evaluate the model on the test dataset
-model.load_state_dict(torch.load(os.path.join(root_dir, "heart_classification.pth")))
-model.eval()
-y_true = []
-y_pred = []
-with torch.no_grad():
-    for test_data in test_loader:
-        test_images, test_labels = (
-            test_data[0].to(device),
-            test_data[1].to(device),
-        )
-        pred = model(test_images).argmax(dim=1)
-        for i in range(len(pred)):
-            y_true.append(test_labels[i].item())
-            y_pred.append(pred[i].item())
-
-print(classification_report(y_true, y_pred, target_names=class_names, digits=4))            
