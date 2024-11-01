@@ -65,13 +65,18 @@ start_time = datetime.now()
 start_time_str = start_time.strftime('%Y-%d-%m_%H-%M')
 model_filename = f"heart_classification_{datetime.now().strftime('%Y-%d-%m_%H-%M')}.pth"
 model_save_path = f"'/home/fit_member/Documents/NS_SemesterWork/{model_filename}"
+# Linux: f"'/home/fit_member/Documents/NS_SemesterWork/{model_filename}"
+# Windows: f"'C:/Users/fit_member/Documents/NS_SemesterWork/{model_filename}"
 
 
-
+# Linux: '/home/fit_member/Documents/NS_SemesterWork/config.yaml'
+# Windows: 'C:/Users/fit_member/Documents/NS_SemesterWork/config.yaml'
 config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/config.yaml')
 print(OmegaConf.to_yaml(config))
 
 # Function to log configuration and metrics to a YAML file
+# Linux: '/home/fit_member/Documents/NS_SemesterWork/results_log.yaml'
+# Windows: 'C:/Users/fit_member/Documents/NS_SemesterWork/results_log.yaml'
 def log_results(config, test_loss, test_acc, model_filename, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/results_log.yaml'):
     timestamp = datetime.now().strftime('%Y-%d-%m_%H-%M')
     results = {
