@@ -271,7 +271,7 @@ learning_rate = config.training.learning_rate
 optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 epochs = config.training.epochs
 val_interval = 1
-auc_metric = ROCAUCMetric()
+
 
 
 
@@ -342,8 +342,7 @@ def train_model(model, train_loader, val_loader, epochs, criterion, optimizer, v
         total_val = 0
         
 
-        val_labels = []
-        val_preds = []
+
         with torch.no_grad():
             for inputs, labels in val_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
