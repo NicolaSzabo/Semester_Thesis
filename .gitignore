@@ -1,5 +1,4 @@
 __pycache__/
-MONAI/
 data/
 runs/
 config.yaml
