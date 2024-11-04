@@ -3,4 +3,5 @@ MONAI/
 data/
 runs/
 config.yaml
+results/
 results_log.yaml
