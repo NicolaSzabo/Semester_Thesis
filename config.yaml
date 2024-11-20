@@ -1,0 +1,8 @@
+dataset:
+  data_dir: '/home/fit_member/Documents/NS_SemesterWork/Project/data/final'
+  batch_size: 2
+  num_workers: 0
+
+training:
+  epochs: 30
+  lr: 0.0001

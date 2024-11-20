@@ -43,9 +43,13 @@ if __name__ == '__main__':
     #Check if GPU is available
     print(torch.cuda.is_available())
     
-    input_directory = 'G:/data/unhealthy_nifti/'
-    output_directory = 'G:/data/unhealthy_segmentation' 
-    object_of_interest = ['heart', 'aorta'] 
+    input_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
+    # windows: 'G://semester_thesis//Project//data//unhealthy_nifti'
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_nifti'
+    output_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    # windows: 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_segmentation'
+    object_of_interest = ['heart']
     
     segment_images(input_directory, output_directory, object_of_interest) 
     

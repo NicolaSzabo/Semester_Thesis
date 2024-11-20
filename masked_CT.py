@@ -1,129 +1,116 @@
-import nibabel as nib
 import numpy as np
+import nibabel as nib
 import os
 
-def adjust_dimensions(data, target_depth):
+def crop_around_mask(data, mask):
     """
-    Adjust the z-axis of the data to a target depth.
-    Crops if current depth is greater than target depth, or pads if less.
+    Crop the 3D image data around the region where the mask is non-zero.
     Args:
-        data (np.ndarray): The input 3D array (CT or mask) to be adjusted.
-        target_depth (int): The desired depth along the z-axis.
+        data (np.ndarray): The input 3D array (CT image).
+        mask (np.ndarray): The binary mask indicating the region of interest.
     Returns:
-        np.ndarray: The adjusted data with the specified z-axis depth.
+        tuple: The cropped data and the coordinates of the bounding box.
     """
-    current_depth = data.shape[2]
+    # Find the non-zero indices in the mask
+    non_zero_coords = np.where(mask > 0)
 
-    # Crop the z-axis if it exceeds target depth
-    if current_depth > target_depth:
-        start = (current_depth - target_depth) // 2
-        adjusted_data = data[:, :, start:start + target_depth]
+    # Check if the mask is empty (no non-zero values)
+    if len(non_zero_coords[0]) == 0:
+        print("Warning: Mask is empty; skipping this image.")
+        return None, None, None
 
-    # Pad the z-axis if it's less than target depth
-    elif current_depth < target_depth:
-        pad_before = (target_depth - current_depth) // 2
-        pad_after = target_depth - current_depth - pad_before
-        adjusted_data = np.pad(data, ((0, 0), (0, 0), (pad_before, pad_after)), mode='constant', constant_values=0)
-    else:
-        adjusted_data = data  # No adjustment needed if depth matches
+    # Calculate the bounding box
+    x_min, x_max = non_zero_coords[0].min(), non_zero_coords[0].max()
+    y_min, y_max = non_zero_coords[1].min(), non_zero_coords[1].max()
+    z_min, z_max = non_zero_coords[2].min(), non_zero_coords[2].max()
 
-    return adjusted_data
+    # Crop the data and mask using the bounding box
+    cropped_data = data[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
+    cropped_mask = mask[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
+
+    return cropped_data, cropped_mask, (x_min, x_max, y_min, y_max, z_min, z_max)
 
 
-def combine_masks(mask_subdirectory):
+def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, label_suffix):
     """
-    Combine heart and aorta masks into a single binary mask.
-
-    Args:
-        mask_subdirectory (str): Path to the directory containing heart and aorta masks.
-
-    Returns:
-        np.ndarray: Combined mask (heart and aorta combined into one binary mask).
-    """
-    heart_mask_path = os.path.join(mask_subdirectory, 'heart.nii.gz')
-    aorta_mask_path = os.path.join(mask_subdirectory, 'aorta.nii.gz')
-
-    # Load heart and aorta masks
-    heart_mask = nib.load(heart_mask_path).get_fdata()
-    aorta_mask = nib.load(aorta_mask_path).get_fdata()
-
-    # Combine the masks using a logical OR (combines the regions of both heart and aorta)
-    combined_mask = np.logical_or(heart_mask, aorta_mask).astype(np.uint8)
-
-    return combined_mask
-
-
-
-def mask_overlay(CT_directory, mask_directory, output_directory, label_suffix, target_depth):
-    """
-    Multiply the combined binary masks (heart + aorta) with the unprocessed CT images.
-
+    Overlay the mask on the CT image, crop around the mask, and save the result.
     Args:
         CT_directory (str): Path to directory containing CT images.
-        mask_directory (str): Path to directory containing binary masks in subdirectories.
+        mask_directory (str): Path to directory containing binary masks.
         output_directory (str): Path to directory where processed images will be saved.
         label_suffix (str): A suffix to append to the output filename ('_healthy' or '_unhealthy').
-        target_depth (int): Desired depth for the z-axis.
     """
-
-    # Get list of all NIfTI files (both CT and mask files)
     CT_files = [f for f in os.listdir(CT_directory) if f.endswith('.nii.gz')]
 
     for CT_filename in CT_files:
         CT_path = os.path.join(CT_directory, CT_filename)
-        patient_id = CT_filename[:7]  # Extract patient ID (first 7 characters) e.g., '11-1382'
+        patient_id = CT_filename[:7]  # Assuming patient ID is the first 7 characters
 
-        # Locate the corresponding mask subdirectory for the patient
-        mask_subdirectory = os.path.join(mask_directory, f"{patient_id}_heart_aorta.nii.gz")
+        # Construct the path to the patient’s mask folder
+        patient_mask_folder = os.path.join(mask_directory, f"{patient_id}_heart.nii.gz")
 
-        if os.path.isdir(mask_subdirectory):
-            # Combine the heart and aorta masks
-            combined_mask = combine_masks(mask_subdirectory)
+        # Check if the folder exists
+        if os.path.isdir(patient_mask_folder):
+            # Define paths for the heart and aorta masks inside the folder
+            heart_mask_path = os.path.join(patient_mask_folder, 'heart.nii.gz')
+            #aorta_mask_path = os.path.join(patient_mask_folder, 'aorta.nii.gz')
 
-            # Load the CT image
-            CT_img = nib.load(CT_path)
-            CT_data = CT_img.get_fdata()
+            # Check that both mask files exist
+            if os.path.isfile(heart_mask_path): #and os.path.isfile(aorta_mask_path):
+                # Load and combine the heart and aorta masks
+                heart_mask = nib.load(heart_mask_path).get_fdata()
+                #aorta_mask = nib.load(aorta_mask_path).get_fdata()
+                #combined_mask = np.maximum(heart_mask, aorta_mask)  # Combine using maximum operation
 
+                # Load the CT image
+                CT_img = nib.load(CT_path)
+                CT_data = CT_img.get_fdata()
 
+                # Apply mask and crop around the region
+                masked_CT = CT_data * heart_mask
+                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, heart_mask)
 
-            # Multiply the CT image by the combined mask (keeping only the regions of interest)
-            final = CT_data * combined_mask
+                # Check if cropping was successful
+                if cropped_CT is None:
+                    print(f"Skipping {CT_filename} due to empty mask.")
+                    continue
 
-            # Adjust both the CT and the combined mask along the z-axis to match target depth
-            final_adjusted = adjust_dimensions(final, target_depth)
+                # Proceed with saving if the crop was successful
+                cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
+                output_path = os.path.join(output_directory, f"{patient_id}_{label_suffix}.nii.gz")
+                nib.save(cropped_img, output_path)
+                print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
-            # Create a new NIfTI image for the final masked CT
-            final_image = nib.Nifti1Image(final_adjusted, CT_img.affine)
-
-            # Create a custom filename with patient ID and the provided label suffix
-            custom_filename = f"{patient_id}_{label_suffix}.nii.gz"
-            output_path = os.path.join(output_directory, custom_filename)
-
-            # Save the final masked CT image
-            nib.save(final_image, output_path)
-
-            print(f'Processed and saved: {output_path}')
+            else:
+                print(f"One or both mask files not found in {patient_mask_folder} for {patient_id}.")
         else:
-            print(f"Mask directory for {patient_id} not found.")
+            print(f"Folder for {patient_id} not found at {patient_mask_folder}")
 
 
 
 if __name__ == '__main__':
-
-    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_nifti'  # Directory with CT images
-    #CT_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_nifti'
-
-    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/data/unhealthy_segmentation'  # Directory with heart and aorta masks in subfolders
-    #mask_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_segmentation'
-
-    output_directory = '/home/fit_member/Documents/NS_SemesterWork/data/data_classification/unhealthy_final'  # Output directory for masked CT images
-    #output_directory = '/Users/nicolaszabo/Library/CloudStorage/OneDrive-Persönlich/Desktop/Semester_Thesis/Project/unhealthy_final'
-
-
-    target_depth = 750  # Set your target depth along the z-axis
+    # Define the directories for your CT images, masks, and output location
+    CT_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
+    # Windows: 'G://semester_thesis//Project//data//unhealthy_nifti'
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_nifti'
+    
+    mask_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    # Windows: 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_segmentation'
+    
+    output_directory = 'G://semester_thesis//Project//data//data_classification//unhealthy_final'
+    # Windows: 'G://semester_thesis//Project//data//data_classification//unhealthy_final'
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_classification/unhealthy_final'
+    label_suffix = 'unhealthy'  # Suffix to differentiate healthy vs. unhealthy images
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    mask_overlay(CT_directory, mask_directory, output_directory, label_suffix = 'unhealthy', target_depth = target_depth)
+    # Call the mask overlay and dynamic cropping function
+    mask_overlay_with_dynamic_crop(
+        CT_directory = CT_directory,
+        mask_directory = mask_directory,
+        output_directory = output_directory,
+        label_suffix = label_suffix
+    )
