@@ -54,7 +54,7 @@ def log_results(config, start_time, end_time, duration, file_path = '/home/fit_m
 base_results_dir = "/home/fit_member/Documents/NS_SemesterWork/Project/results"
 run_dir = os.path.join(base_results_dir, f"run_{start_time.strftime('%Y-%d-%m_%H-%M')}")
 os.makedirs(run_dir, exist_ok=True)
-log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}"
+
 
 
 # Prepare data
@@ -109,8 +109,7 @@ batch_size = config.dataset.batch_size
 num_workers = config.dataset.num_workers
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Logging
-writer = SummaryWriter(log_dir = log_dir)
+
 
 
 
@@ -268,6 +267,9 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     print(f"Fold {fold + 1}/{k_folds}")
     torch.cuda.empty_cache()
 
+    log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+    writer = SummaryWriter(log_dir=log_dir)
+    
     train_subsampler = SubsetRandomSampler(train_idx)
     val_subsampler = SubsetRandomSampler(val_idx)
 
@@ -304,6 +306,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     with open(os.path.join(run_dir, f"misclassified_files_fold_{fold}.txt"), 'w') as f:
         f.write("\n".join(misclassified_files))
 
+    writer.close()
 
 
 
@@ -324,4 +327,3 @@ log_results(config = config,
             end_time = end_time_str,
             duration = duration_str)
 
-writer.close()
