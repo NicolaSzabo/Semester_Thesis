@@ -12,9 +12,9 @@ def crop_around_mask(data, mask):
         tuple: The cropped data and the coordinates of the bounding box.
     """
     # Find the non-zero indices in the mask
-    non_zero_coords = np.where(mask > 0)
+    non_zero_coords = np.where(~np.isnan(mask))  # Use ~np.isnan to locate valid regions
 
-    # Check if the mask is empty (no non-zero values)
+    # Check if the mask is empty (no non-NaN values)
     if len(non_zero_coords[0]) == 0:
         print("Warning: Mask is empty; skipping this image.")
         return None, None, None
@@ -24,11 +24,16 @@ def crop_around_mask(data, mask):
     y_min, y_max = non_zero_coords[1].min(), non_zero_coords[1].max()
     z_min, z_max = non_zero_coords[2].min(), non_zero_coords[2].max()
 
-    # Crop the data and mask using the bounding box
+    # Crop the data using the bounding box
     cropped_data = data[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
     cropped_mask = mask[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
 
     return cropped_data, cropped_mask, (x_min, x_max, y_min, y_max, z_min, z_max)
+
+
+
+
+
 
 
 def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, label_suffix):
@@ -51,24 +56,28 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
 
         # Check if the folder exists
         if os.path.isdir(patient_mask_folder):
-            # Define paths for the heart and aorta masks inside the folder
+            
+            # Define paths for the heart mask inside the folder
             heart_mask_path = os.path.join(patient_mask_folder, 'heart.nii.gz')
-            #aorta_mask_path = os.path.join(patient_mask_folder, 'aorta.nii.gz')
 
-            # Check that both mask files exist
-            if os.path.isfile(heart_mask_path): #and os.path.isfile(aorta_mask_path):
-                # Load and combine the heart and aorta masks
+            # Check that the mask file exists
+            if os.path.isfile(heart_mask_path):
+                # Load the mask
                 heart_mask = nib.load(heart_mask_path).get_fdata()
-                #aorta_mask = nib.load(aorta_mask_path).get_fdata()
-                #combined_mask = np.maximum(heart_mask, aorta_mask)  # Combine using maximum operation
 
+                # Convert the mask to 1 and NaN
+                nan_mask = np.where(heart_mask > 0, 1, np.nan)
+                
                 # Load the CT image
                 CT_img = nib.load(CT_path)
                 CT_data = CT_img.get_fdata()
 
-                # Apply mask and crop around the region
-                masked_CT = CT_data * heart_mask
-                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, heart_mask)
+                # Apply the mask to the CT image
+                masked_CT = CT_data * nan_mask
+
+
+                # Crop the CT image around the mask
+                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, nan_mask)
 
                 # Check if cropping was successful
                 if cropped_CT is None:
@@ -82,26 +91,19 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
                 print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
             else:
-                print(f"One or both mask files not found in {patient_mask_folder} for {patient_id}.")
+                print(f"Mask file not found in {patient_mask_folder} for {patient_id}.")
         else:
             print(f"Folder for {patient_id} not found at {patient_mask_folder}")
 
 
 
+
 if __name__ == '__main__':
     # Define the directories for your CT images, masks, and output location
-    CT_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
-    # Windows: 'G://semester_thesis//Project//data//unhealthy_nifti'
-    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_nifti'
-    
-    mask_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
-    # Windows: 'G://semester_thesis//Project//data//unhealthy_segmentation'
-    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_segmentation'
-    
-    output_directory = 'G://semester_thesis//Project//data//data_classification//unhealthy_final'
-    # Windows: 'G://semester_thesis//Project//data//data_classification//unhealthy_final'
-    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_classification/unhealthy_final'
-    label_suffix = 'unhealthy'  # Suffix to differentiate healthy vs. unhealthy images
+    CT_directory = 'G://semester_thesis//Project//data//healthy_nifti'
+    mask_directory = 'G://semester_thesis//Project//data//healthy_segmentation'
+    output_directory = 'G://semester_thesis//Project//data//data_classification//healthy_final'
+    label_suffix = 'healthy'  # Suffix to differentiate healthy vs. unhealthy images
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
@@ -109,8 +111,8 @@ if __name__ == '__main__':
 
     # Call the mask overlay and dynamic cropping function
     mask_overlay_with_dynamic_crop(
-        CT_directory = CT_directory,
-        mask_directory = mask_directory,
-        output_directory = output_directory,
-        label_suffix = label_suffix
+        CT_directory=CT_directory,
+        mask_directory=mask_directory,
+        output_directory=output_directory,
+        label_suffix=label_suffix
     )
