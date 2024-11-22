@@ -12,9 +12,9 @@ def crop_around_mask(data, mask):
         tuple: The cropped data and the coordinates of the bounding box.
     """
     # Find the non-zero indices in the mask
-    non_zero_coords = np.where(~np.isnan(mask))  # Use ~np.isnan to locate valid regions
+    non_zero_coords = np.where(mask > 0)  # Use mask > 0 to locate valid regions
 
-    # Check if the mask is empty (no non-NaN values)
+    # Check if the mask is empty (no non-zero values)
     if len(non_zero_coords[0]) == 0:
         print("Warning: Mask is empty; skipping this image.")
         return None, None, None
@@ -65,24 +65,32 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
                 # Load the mask
                 heart_mask = nib.load(heart_mask_path).get_fdata()
 
-                # Convert the mask to 1 and NaN
-                nan_mask = np.where(heart_mask > 0, 1, np.nan)
+                # Check if the mask is empty
+                if np.sum(heart_mask > 0) == 0:
+                    print(f"Empty mask for {CT_filename}. Skipping.")
+                    continue
+                
+                
+                # Convert the mask to 1 and nan (binary mask)
+                binary_mask = np.where(heart_mask > 0, 1, 0)
+                
                 
                 # Load the CT image
                 CT_img = nib.load(CT_path)
                 CT_data = CT_img.get_fdata()
 
                 # Apply the mask to the CT image
-                masked_CT = CT_data * nan_mask
-
+                masked_CT = np.where(binary_mask == 1, CT_data, 0)  # Set background to 0
 
                 # Crop the CT image around the mask
-                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, nan_mask)
+                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask)
 
                 # Check if cropping was successful
                 if cropped_CT is None:
                     print(f"Skipping {CT_filename} due to empty mask.")
                     continue
+
+
 
                 # Proceed with saving if the crop was successful
                 cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
@@ -100,10 +108,10 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
 
 if __name__ == '__main__':
     # Define the directories for your CT images, masks, and output location
-    CT_directory = 'G://semester_thesis//Project//data//healthy_nifti'
-    mask_directory = 'G://semester_thesis//Project//data//healthy_segmentation'
-    output_directory = 'G://semester_thesis//Project//data//data_classification//healthy_final'
-    label_suffix = 'healthy'  # Suffix to differentiate healthy vs. unhealthy images
+    CT_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
+    mask_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    output_directory = 'G://semester_thesis//Project//data//data_classification//unhealthy_masked_0'
+    label_suffix = 'unhealthy'  # Suffix to differentiate healthy vs. unhealthy images
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
@@ -111,8 +119,8 @@ if __name__ == '__main__':
 
     # Call the mask overlay and dynamic cropping function
     mask_overlay_with_dynamic_crop(
-        CT_directory=CT_directory,
-        mask_directory=mask_directory,
-        output_directory=output_directory,
-        label_suffix=label_suffix
+        CT_directory = CT_directory,
+        mask_directory = mask_directory,
+        output_directory = output_directory,
+        label_suffix = label_suffix
     )

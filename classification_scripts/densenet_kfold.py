@@ -104,7 +104,7 @@ class HeartClassification(Dataset):
 
 # Data preparation for K-Fold
 dataset = HeartClassification(X, y, transform = train_transform)
-k_folds = 5
+k_folds = config.training.k_folds
 batch_size = config.dataset.batch_size
 num_workers = config.dataset.num_workers
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

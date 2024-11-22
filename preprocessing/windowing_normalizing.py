@@ -8,53 +8,53 @@ WINDOW_WIDTH = 400
 LOWER_BOUND = WINDOW_CENTER - WINDOW_WIDTH / 2
 UPPER_BOUND = WINDOW_CENTER + WINDOW_WIDTH / 2
 
-# Define the root directory and subfolders
-root_dir = 'G://semester_thesis//Project//data//final'
-subfolders = ['healthy', 'unhealthy']
+# Define input and output directories
+input_dir = 'G://semester_thesis//Project//data//data_classification//healthy_resized'
+output_dir = 'G://semester_thesis//Project//data//final//healthy'
+
+# Ensure the output directory exists
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+
 
 # Function to apply windowing and normalization
-def window_and_normalize(image, mask, lower, upper):
+def window_and_normalize(image, lower, upper):
     """
-    Applies windowing and normalization to the image within the mask region.
-    Background remains 0.
+    Applies windowing and normalization to the image.
+    Background (NaN) remains NaN.
     """
-    # Apply mask to retain only the heart region
-    masked_image = np.where(mask > 0, image, np.nan)
-    
-    # Normalize the masked region to [0, 1]
-    normalized_image = np.where(mask > 0, (masked_image - lower) / (upper - lower), np.nan)
-    
+    # Preserve NaN in the background
+    normalized_image = (image - lower) / (upper - lower)
     normalized_image = np.clip(normalized_image, 0, 1)
-    
+
+    # Ensure background (NaN) remains NaN
+    normalized_image[np.isnan(image)] = np.nan
+
     return normalized_image
 
-# Iterate through subfolders
-for subfolder in subfolders:
-    folder_path = os.path.join(root_dir, subfolder)
-    for file_name in os.listdir(folder_path):
-        # Process only NIfTI files
-        if file_name.endswith(".nii_processed.nii.gz"):
-            # Load the NIfTI file
-            file_path = os.path.join(folder_path, file_name)
-            nifti = nib.load(file_path)
-            image_data = nifti.get_fdata()
 
-            # Use the same image as the mask (only non-zero regions are the heart)
-            mask = np.where(image_data > 0, 1, 0)
 
-            # Apply windowing and normalization
-            processed_image_data = window_and_normalize(image_data, mask, LOWER_BOUND, UPPER_BOUND)
 
-            # Create the new filename
-            base_name = file_name.split("_")[0]  # Extract xx-xxxx
-            new_file_name = f"{base_name}_{subfolder}.nii.gz"
-            new_file_path = os.path.join(folder_path, new_file_name)
+# Iterate through files in the input directory
+for file_name in os.listdir(input_dir):
+    # Process only NIfTI files
+    if file_name.endswith(".nii.gz"):
+        # Load the NIfTI file
+        input_path = os.path.join(input_dir, file_name)
+        nifti = nib.load(input_path)
+        image_data = nifti.get_fdata()
 
-            # Save the processed image
-            processed_nifti = nib.Nifti1Image(processed_image_data, affine=nifti.affine)
-            nib.save(processed_nifti, new_file_path)
+        # Apply windowing and normalization
+        processed_image_data = window_and_normalize(image_data, LOWER_BOUND, UPPER_BOUND)
 
-            # Remove the old file
-            os.remove(file_path)
+        # Create the new filename
+        base_name = file_name.split("_")[0]
+        output_file_name = f"{base_name}_healthy.nii.gz"
+        output_path = os.path.join(output_dir, output_file_name)
 
-            print(f"Processed and replaced: {file_name} -> {new_file_name}")
+        # Save the processed image
+        processed_nifti = nib.Nifti1Image(processed_image_data, affine=nifti.affine)
+        nib.save(processed_nifti, output_path)
+
+        print(f"Processed and saved: {file_name} -> {output_file_name}")

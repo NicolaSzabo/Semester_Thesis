@@ -89,8 +89,8 @@ def process_images(directory, output_directory, target_shape):
 
 if __name__ == '__main__':
     # Directory containing NIfTI images
-    directory = 'G://semester_thesis//Project//data//data_classification//healthy_final'
-    output_directory = 'G://semester_thesis//Project//data//data_classification//healthy_final_processed'
+    directory = 'G://semester_thesis//Project//data//data_classification//healthy_masked_nan'
+    output_directory = 'G://semester_thesis//Project//data//data_classification//healthy_resized'
 
     # Find the maximum dimensions across all images
     max_x, max_y, max_z = find_max_dimensions(directory)
