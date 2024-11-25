@@ -188,7 +188,8 @@ def evaluate_model(model, val_loader, device, X_val):
     all_preds = []
     all_labels = []
     all_probs = []
-    misclassified_indices = []
+    misclassified_fp = []  # False positives
+    misclassified_fn = []  # False negatives
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(val_loader):
@@ -204,13 +205,23 @@ def evaluate_model(model, val_loader, device, X_val):
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
 
-            # Identify misclassified samples
-            batch_indices = range(i * val_loader.batch_size, i * val_loader.batch_size + len(labels))
-            for idx, pred, label in zip(batch_indices, preds.cpu().numpy(), labels.cpu().numpy()):
+            # Identify misclassified images
+            for idx, (input_idx, pred, label) in enumerate(
+                    zip(val_loader.sampler.indices, preds.cpu().numpy(), labels.cpu().numpy())):
                 if pred != label:
-                    misclassified_indices.append(idx)
+                    if pred == 1 and label == 0:  # False Positive
+                        misclassified_fp.append(X_val[input_idx])
+                    elif pred == 0 and label == 1:  # False Negative
+                        misclassified_fn.append(X_val[input_idx])
 
-    return np.array(all_labels), np.array(all_preds), np.array(all_probs), misclassified_indices
+            # Save misclassified filenames
+    with open(os.path.join(run_dir, f"misclassified_fp_fold_{fold}.txt"), 'w') as fp_file:
+        fp_file.write("\n".join(misclassified_fp))
+    with open(os.path.join(run_dir, f"misclassified_fn_fold_{fold}.txt"), 'w') as fn_file:
+        fn_file.write("\n".join(misclassified_fn))
+
+    return np.array(all_labels), np.array(all_preds), np.array(all_probs)
+
 
 
 
@@ -282,7 +293,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     # Linux: f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
     # Windows: r"C:\Users\nicol\OneDrive\Desktop\semester_thesis\Project\runs\experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}\fold_{fold + 1}"
     writer = SummaryWriter(log_dir=log_dir)
-    
+
     train_subsampler = SubsetRandomSampler(train_idx)
     val_subsampler = SubsetRandomSampler(val_idx)
 
@@ -298,7 +309,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     torch.save(model.state_dict(), os.path.join(run_dir, f"model_fold_{fold}.pth"))
 
     # Evaluate and compute metrics
-    y_true, y_pred, y_probs, misclassified_indices = evaluate_model(model, val_loader, device, X)
+    y_true, y_pred, y_probs = evaluate_model(model, val_loader, device, X)
 
     # Plot confusion matrix
     plot_confusion_matrix(y_true, y_pred, class_names, fold)
@@ -307,13 +318,6 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     plot_roc_prc(y_true, y_probs, class_names, fold)
 
 
-    # Get the file paths of the misclassified samples
-    misclassified_files = [X[idx] for idx in misclassified_indices]
-
-
-    # Optionally, save to a file for further inspection
-    with open(os.path.join(run_dir, f"misclassified_files_fold_{fold}.txt"), 'w') as f:
-        f.write("\n".join(misclassified_files))
 
     writer.close()
 
