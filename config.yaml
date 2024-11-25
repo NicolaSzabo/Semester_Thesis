@@ -1,5 +1,7 @@
 dataset:
-  data_dir: '/home/fit_member/Documents/NS_SemesterWork/Project/data/final'
+  data_dir: 'G://semester_thesis//Project//data//final'
+  # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/final'
+  # Windows: 'G://semester_thesis//Project//data//final'
   batch_size: 2
   num_workers: 0
 

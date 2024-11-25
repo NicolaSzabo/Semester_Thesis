@@ -28,13 +28,19 @@ else:
 set_determinism(seed=0)
 
 # Configuration and paths
-config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml')
+config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml') 
+# DIRECTORY: 
+# Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml'
+# Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//config.yaml'
 print(OmegaConf.to_yaml(config))
 
 start_time = datetime.now()
 start_time_str = start_time.strftime('%Y-%d-%m_%H-%M')
 
 def log_results(config, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/Project/results/results_log.yaml'):
+    # DIRECTORY:
+    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results/results_log.yaml'
+    # Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results//results_log.yaml'
     timestamp = datetime.now().strftime('%Y-%d-%m_%H-%M')
     results = {
         'run_id': f"Run_{timestamp}",
@@ -51,7 +57,10 @@ def log_results(config, start_time, end_time, duration, file_path = '/home/fit_m
 
 
 
-base_results_dir = "/home/fit_member/Documents/NS_SemesterWork/Project/results"
+base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results'
+# DIRECTORY:
+# Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results'
+# Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results'
 run_dir = os.path.join(base_results_dir, f"run_{start_time.strftime('%Y-%d-%m_%H-%M')}")
 os.makedirs(run_dir, exist_ok=True)
 
@@ -268,6 +277,10 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     torch.cuda.empty_cache()
 
     log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+
+    # DIRECTORY:
+    # Linux: f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+    # Windows: r"C:\Users\nicol\OneDrive\Desktop\semester_thesis\Project\runs\experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}\fold_{fold + 1}"
     writer = SummaryWriter(log_dir=log_dir)
     
     train_subsampler = SubsetRandomSampler(train_idx)
