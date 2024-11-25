@@ -310,10 +310,6 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     # Get the file paths of the misclassified samples
     misclassified_files = [X[idx] for idx in misclassified_indices]
 
-    # Print or log misclassified files
-    print(f"Misclassified files for Fold {fold + 1}:")
-    for file_path in misclassified_files:
-        print(file_path)
 
     # Optionally, save to a file for further inspection
     with open(os.path.join(run_dir, f"misclassified_files_fold_{fold}.txt"), 'w') as f:
