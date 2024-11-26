@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import nibabel as nib
+import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
@@ -79,6 +80,9 @@ image_files = [
 num_each = [len(image_files[i]) for i in range(num_class)]
 X = [file for class_files in image_files for file in class_files]
 y = [i for i in range(num_class) for _ in range(num_each[i])]
+for i, (path, label) in enumerate(zip(X, y)):
+    print(f"Index: {i}, Path: {path}, Label: {label}")
+
 
 # Verify data
 first_image = LoadImage()(X[0])
@@ -175,24 +179,26 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
     return val_loss, val_acc
 
 
+import pandas as pd
 
-
-
-
-
+# Create an empty list to store misclassified data across all folds
+misclassified_data = []
 
 
 # Function to compute metrics for evaluation
-def evaluate_model(model, val_loader, device, X_val):
+def evaluate_model(model, val_loader, device, X_val, fold):
     model.eval()
     all_preds = []
     all_labels = []
     all_probs = []
-    misclassified_fp = []  # False positives
-    misclassified_fn = []  # False negatives
+
+    # Validation indices
+    val_indices = list(val_loader.sampler.indices)
+    X_val = [X[i] for i in val_indices]  # Validation file paths
+    y_val = [y[i] for i in val_indices]  # Validation labels
 
     with torch.no_grad():
-        for i, (inputs, labels) in enumerate(val_loader):
+        for inputs, labels in val_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
 
@@ -205,25 +211,27 @@ def evaluate_model(model, val_loader, device, X_val):
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
 
-            # Identify misclassified images
-            for idx, (input_idx, pred, label) in enumerate(
-                    zip(val_loader.sampler.indices, preds.cpu().numpy(), labels.cpu().numpy())):
-                if pred != label:
-                    if pred == 1 and label == 0:  # False Positive
-                        misclassified_fp.append(X_val[input_idx])
-                    elif pred == 0 and label == 1:  # False Negative
-                        misclassified_fn.append(X_val[input_idx])
+    # Convert lists to numpy arrays for easier manipulation
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
 
-            # Save misclassified filenames
-    with open(os.path.join(run_dir, f"misclassified_fp_fold_{fold}.txt"), 'w') as fp_file:
-        fp_file.write("\n".join(misclassified_fp))
-    with open(os.path.join(run_dir, f"misclassified_fn_fold_{fold}.txt"), 'w') as fn_file:
-        fn_file.write("\n".join(misclassified_fn))
+    y_true = y_val
+    y_true = np.array(y_true)# Ground truth labels
+    y_pred = all_preds  # Predictions from the model
 
-    return np.array(all_labels), np.array(all_preds), np.array(all_probs)
+    # Identify misclassified samples and save to misclassified_data
+    for i, pred in enumerate(all_preds):
+        actual_label = y_val[i]
+        file_path = X_val[i]
+        if pred != actual_label:
+            misclassified_data.append({
+                'fold': fold,
+                'file_path': file_path,
+                'actual_label': actual_label,
+                'predicted_label': pred
+            })
 
-
-
+    return y_true, y_pred, np.array(all_probs)
 
 
 # Function to plot confusion matrix
@@ -243,8 +251,11 @@ def plot_confusion_matrix(y_true, y_pred, class_names, fold):
 # Function to plot ROC and PRC curves
 def plot_roc_prc(y_true, y_probs, class_names, fold):
     for i, class_name in enumerate(class_names):
-        # Compute ROC
-        fpr, tpr, _ = roc_curve(y_true == i, y_probs[:, i])
+        # Create binary labels for the current class
+        binary_y_true = (y_true == i).astype(int)
+
+        # Compute ROC curve
+        fpr, tpr, _ = roc_curve(binary_y_true, y_probs[:, i])
         roc_auc = auc(fpr, tpr)
 
         # Plot ROC
@@ -259,7 +270,7 @@ def plot_roc_prc(y_true, y_probs, class_names, fold):
         plt.close()
 
         # Compute PRC
-        precision, recall, _ = precision_recall_curve(y_true == i, y_probs[:, i])
+        precision, recall, _ = precision_recall_curve(binary_y_true, y_probs[:, i])
         pr_auc = auc(recall, precision)
 
         # Plot PRC
@@ -271,6 +282,7 @@ def plot_roc_prc(y_true, y_probs, class_names, fold):
         plt.legend(loc='lower left')
         plt.savefig(os.path.join(run_dir, f"prc_{class_name}_fold_{fold}.png"))
         plt.close()
+
 
 
 
@@ -309,7 +321,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     torch.save(model.state_dict(), os.path.join(run_dir, f"model_fold_{fold}.pth"))
 
     # Evaluate and compute metrics
-    y_true, y_pred, y_probs = evaluate_model(model, val_loader, device, X)
+    y_true, y_pred, y_probs = evaluate_model(model, val_loader, device, X, fold)
 
     # Plot confusion matrix
     plot_confusion_matrix(y_true, y_pred, class_names, fold)
@@ -317,9 +329,17 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     # Plot ROC and PRC curves
     plot_roc_prc(y_true, y_probs, class_names, fold)
 
+    # Convert misclassified data to a DataFrame
+    misclassified_df = pd.DataFrame(misclassified_data)
 
+    # Save to CSV
+    csv_path = os.path.join(run_dir, "misclassified_files.csv")
+    misclassified_df.to_csv(csv_path, index=False)
+
+    print(f"Misclassified files saved to {csv_path}")
 
     writer.close()
+
 
 
 
