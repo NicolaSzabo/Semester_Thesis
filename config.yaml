@@ -1,5 +1,5 @@
 dataset:
-  data_dir: '/home/fit_member/Documents/NS_SemesterWork/Project/data/final'
+  data_dir: 'C:\Users\nicol\OneDrive\Desktop\semester_thesis\Project\data'
   # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/final'
   # Windows: 'G://semester_thesis//Project//data//final'
   batch_size: 2
@@ -7,5 +7,5 @@ dataset:
 
 training:
   k_folds: 5
-  epochs: 100
-  lr: 0.0001
+  epochs: 1
+  lr: 0.1
