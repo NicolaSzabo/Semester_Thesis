@@ -23,7 +23,7 @@ else:
 set_determinism(seed=0)
 
 # Configuration and paths
-config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml')
+config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config_final_models.yaml')
 print(OmegaConf.to_yaml(config))
 
 start_time = datetime.now()
@@ -42,10 +42,8 @@ def log_results(config, start_time, end_time, duration, model_filename, file_pat
     with open(file_path, 'a') as f:
         OmegaConf.save(config=OmegaConf.create(results), f=f)
 
-
-
 # Directories
-base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results'
+base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results/final_models'
 run_dir = os.path.join(base_results_dir, f"run_{start_time.strftime('%Y-%d-%m_%H-%M')}")
 os.makedirs(run_dir, exist_ok=True)
 
@@ -101,7 +99,7 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=config.training.lr)
 
 # TensorBoard setup
-log_dir = os.path.join(run_dir, "logs")
+log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/final_models/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}"
 writer = SummaryWriter(log_dir=log_dir)
 
 # Training loop
@@ -143,6 +141,6 @@ torch.save(trained_model.state_dict(), os.path.join(run_dir, model_filename))
 
 # Log results
 end_time = datetime.now()
-log_results(config=config, start_time=start_time_str, end_time=end_time.strftime('%Y-%d-%m_%H-%M'), duration=str(end_time - start_time), model_filename=model_filename, file_path=os.path.join(base_results_dir, "results_final.yaml"))
+log_results(config=config, start_time=start_time_str, end_time=end_time.strftime('%Y-%d-%m_%H-%M'), duration=str(end_time - start_time), model_filename=model_filename, file_path=os.path.join(base_results_dir, "results_final_models.yaml"))
 
 writer.close()
