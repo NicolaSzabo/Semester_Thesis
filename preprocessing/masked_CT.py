@@ -2,21 +2,21 @@ import numpy as np
 import nibabel as nib
 import os
 
-def crop_around_mask(data, mask):
-    """
-    Crop the 3D image data around the region where the mask is non-zero.
-    Args:
-        data (np.ndarray): The input 3D array (CT image).
-        mask (np.ndarray): The binary mask indicating the region of interest.
-    Returns:
-        tuple: The cropped data and the coordinates of the bounding box.
-    """
-    # Find the non-zero indices in the mask
-    non_zero_coords = np.where(mask > 0)  # Use mask > 0 to locate valid regions
+def crop_around_mask(data, mask, reference_masks=None):
+ 
+    if reference_masks:
+        # Combine all reference masks to determine the bounding box
+        combined_reference_mask = np.zeros(mask.shape)
+        for ref_mask in reference_masks:
+            combined_reference_mask = np.maximum(combined_reference_mask, ref_mask)
+        non_zero_coords = np.where(combined_reference_mask > 0)
+    else:
+        # Use the main mask if no reference masks are provided
+        non_zero_coords = np.where(mask > 0)
 
     # Check if the mask is empty (no non-zero values)
     if len(non_zero_coords[0]) == 0:
-        print("Warning: Mask is empty; skipping this image.")
+        print("Warning: Reference mask is empty; skipping this image.")
         return None, None, None
 
     # Calculate the bounding box
@@ -36,15 +36,10 @@ def crop_around_mask(data, mask):
 
 
 
-def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, label_suffix):
-    """
-    Overlay the mask on the CT image, crop around the mask, and save the result.
-    Args:
-        CT_directory (str): Path to directory containing CT images.
-        mask_directory (str): Path to directory containing binary masks.
-        output_directory (str): Path to directory where processed images will be saved.
-        label_suffix (str): A suffix to append to the output filename ('_healthy' or '_unhealthy').
-    """
+
+
+def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, label_suffix, reference_mask_names):
+   
     CT_files = [f for f in os.listdir(CT_directory) if f.endswith('.nii.gz')]
 
     for CT_filename in CT_files:
@@ -52,75 +47,81 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         patient_id = CT_filename[:7]  # Assuming patient ID is the first 7 characters
 
         # Construct the path to the patient’s mask folder
-        patient_mask_folder = os.path.join(mask_directory, f"{patient_id}_heart.nii.gz")
+        patient_mask_folder = os.path.join(mask_directory, f"{patient_id}_masks")
 
         # Check if the folder exists
         if os.path.isdir(patient_mask_folder):
-            
-            # Define paths for the heart mask inside the folder
-            heart_mask_path = os.path.join(patient_mask_folder, 'heart.nii.gz')
+            mask_files = os.listdir(patient_mask_folder)
 
-            # Check that the mask file exists
-            if os.path.isfile(heart_mask_path):
-                # Load the mask
-                heart_mask = nib.load(heart_mask_path).get_fdata()
-
-                # Check if the mask is empty
-                if np.sum(heart_mask > 0) == 0:
-                    print(f"Empty mask for {CT_filename}. Skipping.")
+            # Load all reference masks
+            reference_masks = []
+            for mask_name in reference_mask_names:
+                reference_mask_path = os.path.join(patient_mask_folder, f"{mask_name}.nii.gz")
+                if not os.path.isfile(reference_mask_path):
+                    print(f"Reference mask '{mask_name}' not found for {patient_id}. Skipping this mask.")
                     continue
-                
-                
-                # Convert the mask to 1 and nan (binary mask)
-                binary_mask = np.where(heart_mask > 0, 1, 0)
-                
-                
-                # Load the CT image
-                CT_img = nib.load(CT_path)
-                CT_data = CT_img.get_fdata()
+                reference_masks.append(nib.load(reference_mask_path).get_fdata())
 
-                # Apply the mask to the CT image
-                masked_CT = np.where(binary_mask == 1, CT_data, 0)  # Set background to 0
+            # Ensure we have at least one valid reference mask
+            if not reference_masks:
+                print(f"No valid reference masks found for {patient_id}. Skipping.")
+                continue
 
-                # Crop the CT image around the mask
-                cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask)
+            # Load all masks and overlay them
+            combined_mask = np.zeros(reference_masks[0].shape)
+            for mask_file in mask_files:
+                mask_path = os.path.join(patient_mask_folder, mask_file)
+                mask_data = nib.load(mask_path).get_fdata()
+                combined_mask = np.maximum(combined_mask, mask_data)
 
-                # Check if cropping was successful
-                if cropped_CT is None:
-                    print(f"Skipping {CT_filename} due to empty mask.")
-                    continue
+            # Convert the combined mask to binary
+            binary_mask = np.where(combined_mask > 0, 1, np.nan)
 
+            # Load the CT image
+            CT_img = nib.load(CT_path)
+            CT_data = CT_img.get_fdata()
 
+            # Apply the mask to the CT image
+            masked_CT = np.where(binary_mask == 1, CT_data, np.nan)  # Set background to nan
 
-                # Proceed with saving if the crop was successful
-                cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
-                output_path = os.path.join(output_directory, f"{patient_id}_{label_suffix}.nii.gz")
-                nib.save(cropped_img, output_path)
-                print(f"Processed and saved: {output_path} with bounding box {bbox}")
+            # Crop the CT image and mask using the reference masks
+            cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask, reference_masks=reference_masks)
 
-            else:
-                print(f"Mask file not found in {patient_mask_folder} for {patient_id}.")
+            # Check if cropping was successful
+            if cropped_CT is None:
+                print(f"Skipping {CT_filename} due to empty reference masks.")
+                continue
+
+            # Save the cropped CT image
+            cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
+            output_path = os.path.join(output_directory, f"{patient_id}_{label_suffix}.nii.gz")
+            nib.save(cropped_img, output_path)
+            print(f"Processed and saved: {output_path} with bounding box {bbox}")
+
         else:
             print(f"Folder for {patient_id} not found at {patient_mask_folder}")
 
 
 
 
+
+
 if __name__ == '__main__':
-    # Define the directories for your CT images, masks, and output location
-    CT_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
-    mask_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
-    output_directory = 'G://semester_thesis//Project//data//data_classification//unhealthy_masked_0'
-    label_suffix = 'unhealthy'  # Suffix to differentiate healthy vs. unhealthy images
+    CT_directory = 'G://semester_thesis//Project//data//nifti_files//unhealthy'
+    mask_directory = 'G://data//segmentation//unhealthy'
+    output_directory = 'G://data//preprocessing//unhealthy_masked_nan//unhealthy'
+    label_suffix = 'unhealthy'
+    reference_mask_names = ['heart', 'left_ventricle', 'right_ventricle']  # Specify multiple reference masks
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    # Call the mask overlay and dynamic cropping function
+    # Run the function
     mask_overlay_with_dynamic_crop(
-        CT_directory = CT_directory,
-        mask_directory = mask_directory,
-        output_directory = output_directory,
-        label_suffix = label_suffix
+        CT_directory=CT_directory,
+        mask_directory=mask_directory,
+        output_directory=output_directory,
+        label_suffix=label_suffix,
+        reference_mask_names=reference_mask_names
     )

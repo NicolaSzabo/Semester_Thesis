@@ -29,7 +29,7 @@ else:
 set_determinism(seed=0)
 
 # Configuration and paths
-config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml') 
+config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config_cross_validation.yaml') 
 # DIRECTORY: 
 # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml'
 # Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//config.yaml'
@@ -38,7 +38,7 @@ print(OmegaConf.to_yaml(config))
 start_time = datetime.now()
 start_time_str = start_time.strftime('%Y-%d-%m_%H-%M')
 
-def log_results(config, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/Project/results/results_log.yaml'):
+def log_results(config, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation/results_cross_validation.yaml'):
     # DIRECTORY:
     # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results/results_log.yaml'
     # Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results//results_log.yaml'
@@ -58,7 +58,7 @@ def log_results(config, start_time, end_time, duration, file_path = '/home/fit_m
 
 
 
-base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results'
+base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation'
 # DIRECTORY:
 # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results'
 # Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results'
@@ -299,7 +299,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     print(f"Fold {fold + 1}/{k_folds}")
     torch.cuda.empty_cache()
 
-    log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+    log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/cross_validation/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
 
     # DIRECTORY:
     # Linux: f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"

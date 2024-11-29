@@ -33,7 +33,7 @@ def segment_images(input_directory, output_directory, object_of_interest):
             
             # Run TotalSegmentator for each NIfTI file
             print(f'Processing file: {input_path} -> Output: {output_path}')
-            python_api.totalsegmentator(input_path, output_path, task = 'total', roi_subset = object_of_interest)
+            python_api.totalsegmentator(input_path, output_path, task = 'heartchambers_highres', roi_subset = object_of_interest)
                                                                                                                                                 
                                                                                                                                                   
             
@@ -43,13 +43,13 @@ if __name__ == '__main__':
     #Check if GPU is available
     print(torch.cuda.is_available())
     
-    input_directory = 'G://semester_thesis//Project//data//unhealthy_nifti'
+    input_directory = 'G://semester_thesis//Project//data//nifti_files//healthy'
     # windows: 'G://semester_thesis//Project//data//unhealthy_nifti'
     # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_nifti'
-    output_directory = 'G://semester_thesis//Project//data//unhealthy_segmentation'
+    output_directory = 'G://data//segmentation//healthy'
     # windows: 'G://semester_thesis//Project//data//unhealthy_segmentation'
     # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/data/unhealthy_segmentation'
-    object_of_interest = ['heart']
+    object_of_interest = ['heart', 'aorta']
     
     segment_images(input_directory, output_directory, object_of_interest) 
     
