@@ -4,7 +4,7 @@ import os
 
 def crop_around_mask(data, mask, reference_masks=None):
     if reference_masks:
-        # Combine all reference masks to determine the bounding box
+        # Combine all reference masks (excluding aorta) to determine the bounding box
         combined_reference_mask = np.zeros(mask.shape)
         for ref_mask in reference_masks:
             combined_reference_mask = np.maximum(combined_reference_mask, ref_mask)
@@ -44,24 +44,29 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         if os.path.isdir(patient_mask_folder):
             mask_files = os.listdir(patient_mask_folder)
 
-            # Load and combine masks, excluding 'aorta'
+            # Load and combine all masks for applying to the CT image (including aorta)
             combined_mask = None
+            reference_masks = []  # To store masks for cropping (excluding aorta)
             for mask_file in mask_files:
-                if 'aorta' in mask_file:
-                    continue  # Skip 'aorta' masks
                 mask_path = os.path.join(patient_mask_folder, mask_file)
                 mask_data = nib.load(mask_path).get_fdata()
+
+                # Add all masks to the combined mask
                 if combined_mask is None:
                     combined_mask = mask_data
                 else:
                     combined_mask = np.maximum(combined_mask, mask_data)
+
+                # Exclude aorta from cropping calculation
+                if 'aorta' not in mask_file:
+                    reference_masks.append(mask_data)
 
             # Ensure we have a valid combined mask
             if combined_mask is None:
                 print(f"No valid masks found for {patient_id}. Skipping.")
                 continue
 
-            # Convert the combined mask to binary
+            # Convert the combined mask to binary for masking the CT image
             binary_mask = np.where(combined_mask > 0, 1, np.nan)
 
             # Load the CT image
@@ -71,12 +76,12 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
             # Apply the mask to the CT image
             masked_CT = np.where(binary_mask == 1, CT_data, np.nan)  # Set background to nan
 
-            # Crop the CT image and mask using the combined mask
-            cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask, reference_masks=[combined_mask])
+            # Crop the CT image and mask using the reference masks (excluding aorta)
+            cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask, reference_masks=reference_masks)
 
             # Check if cropping was successful
             if cropped_CT is None:
-                print(f"Skipping {CT_filename} due to empty masks.")
+                print(f"Skipping {CT_filename} due to empty reference masks.")
                 continue
 
             # Save the cropped CT image
