@@ -3,7 +3,6 @@ import nibabel as nib
 import os
 
 def crop_around_mask(data, mask, reference_masks=None):
- 
     if reference_masks:
         # Combine all reference masks to determine the bounding box
         combined_reference_mask = np.zeros(mask.shape)
@@ -30,49 +29,37 @@ def crop_around_mask(data, mask, reference_masks=None):
 
     return cropped_data, cropped_mask, (x_min, x_max, y_min, y_max, z_min, z_max)
 
-
-
-
-
-
-
-
-
-def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, label_suffix, reference_mask_names):
-   
+def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory):
+    # List all CT files
     CT_files = [f for f in os.listdir(CT_directory) if f.endswith('.nii.gz')]
 
     for CT_filename in CT_files:
         CT_path = os.path.join(CT_directory, CT_filename)
-        patient_id = CT_filename[:7]  # Assuming patient ID is the first 7 characters
+        patient_id = CT_filename.replace('.nii.gz', '')  # Get patient ID from the filename
 
         # Construct the path to the patient’s mask folder
-        patient_mask_folder = os.path.join(mask_directory, f"{patient_id}_masks")
+        patient_mask_folder = os.path.join(mask_directory, patient_id)
 
         # Check if the folder exists
         if os.path.isdir(patient_mask_folder):
             mask_files = os.listdir(patient_mask_folder)
 
-            # Load all reference masks
-            reference_masks = []
-            for mask_name in reference_mask_names:
-                reference_mask_path = os.path.join(patient_mask_folder, f"{mask_name}.nii.gz")
-                if not os.path.isfile(reference_mask_path):
-                    print(f"Reference mask '{mask_name}' not found for {patient_id}. Skipping this mask.")
-                    continue
-                reference_masks.append(nib.load(reference_mask_path).get_fdata())
-
-            # Ensure we have at least one valid reference mask
-            if not reference_masks:
-                print(f"No valid reference masks found for {patient_id}. Skipping.")
-                continue
-
-            # Load all masks and overlay them
-            combined_mask = np.zeros(reference_masks[0].shape)
+            # Load and combine masks, excluding 'aorta'
+            combined_mask = None
             for mask_file in mask_files:
+                if 'aorta' in mask_file:
+                    continue  # Skip 'aorta' masks
                 mask_path = os.path.join(patient_mask_folder, mask_file)
                 mask_data = nib.load(mask_path).get_fdata()
-                combined_mask = np.maximum(combined_mask, mask_data)
+                if combined_mask is None:
+                    combined_mask = mask_data
+                else:
+                    combined_mask = np.maximum(combined_mask, mask_data)
+
+            # Ensure we have a valid combined mask
+            if combined_mask is None:
+                print(f"No valid masks found for {patient_id}. Skipping.")
+                continue
 
             # Convert the combined mask to binary
             binary_mask = np.where(combined_mask > 0, 1, np.nan)
@@ -84,34 +71,27 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
             # Apply the mask to the CT image
             masked_CT = np.where(binary_mask == 1, CT_data, np.nan)  # Set background to nan
 
-            # Crop the CT image and mask using the reference masks
-            cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask, reference_masks=reference_masks)
+            # Crop the CT image and mask using the combined mask
+            cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, binary_mask, reference_masks=[combined_mask])
 
             # Check if cropping was successful
             if cropped_CT is None:
-                print(f"Skipping {CT_filename} due to empty reference masks.")
+                print(f"Skipping {CT_filename} due to empty masks.")
                 continue
 
             # Save the cropped CT image
             cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
-            output_path = os.path.join(output_directory, f"{patient_id}_{label_suffix}.nii.gz")
+            output_path = os.path.join(output_directory, f"{patient_id}.nii.gz")
             nib.save(cropped_img, output_path)
             print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
         else:
             print(f"Folder for {patient_id} not found at {patient_mask_folder}")
 
-
-
-
-
-
 if __name__ == '__main__':
-    CT_directory = 'G://semester_thesis//Project//data//nifti_files//unhealthy'
-    mask_directory = 'G://data//segmentation//unhealthy'
-    output_directory = 'G://data//preprocessing//unhealthy_masked_nan//unhealthy'
-    label_suffix = 'unhealthy'
-    reference_mask_names = ['heart', 'left_ventricle', 'right_ventricle']  # Specify multiple reference masks
+    CT_directory = 'Project/data/niftis_full_body'
+    mask_directory = 'Project/data/segmentation_heart'
+    output_directory = 'Project/data/masked_with_nan'
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
@@ -121,7 +101,5 @@ if __name__ == '__main__':
     mask_overlay_with_dynamic_crop(
         CT_directory=CT_directory,
         mask_directory=mask_directory,
-        output_directory=output_directory,
-        label_suffix=label_suffix,
-        reference_mask_names=reference_mask_names
+        output_directory=output_directory
     )
