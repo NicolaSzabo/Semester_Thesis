@@ -38,7 +38,7 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         patient_id = CT_filename.replace('.nii.gz', '')  # Get patient ID from the filename
 
         # Construct the path to the patient’s mask folder
-        patient_mask_folder = os.path.join(mask_directory, patient_id)
+        patient_mask_folder = os.path.join(mask_directory, f"{patient_id}.nii.gz")
 
         # Check if the folder exists
         if os.path.isdir(patient_mask_folder):
@@ -94,9 +94,9 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
             print(f"Folder for {patient_id} not found at {patient_mask_folder}")
 
 if __name__ == '__main__':
-    CT_directory = 'Project/data/niftis_full_body'
-    mask_directory = 'Project/data/segmentation_heart'
-    output_directory = 'Project/data/masked_with_nan'
+    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/niftis_full_body'
+    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/segmentation_heart'
+    output_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/masked_with_nan'
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
