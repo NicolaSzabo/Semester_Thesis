@@ -53,3 +53,21 @@ plt.xlabel('Age')
 plt.ylabel('Frequency')
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.show()
+
+
+
+
+
+########## Remove rows based on conditions
+cleaned_data = data[
+    (data['extra Heart iamge'] != 'no') &  # Keep rows where CT is not 'no'
+    (data['Year of birth'].notnull()) &   # Keep rows where Year of birth is not missing
+    (data['Age'].notnull()) &             # Keep rows where Age is not missing
+    (data['Baby'] != 'yes') &             # Keep rows where Baby is not 'yes'
+    (data['Gender'].notnull())            # Keep rows where Gender is not missing
+]
+
+# Save the cleaned data
+cleaned_data.to_excel('.//data//data_overview_cleaned.xlsx', index=False)
+
+print(f"Cleaned data saved as: {'.//data//data_overview_cleaned.xlsx'}")

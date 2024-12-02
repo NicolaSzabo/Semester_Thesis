@@ -27,6 +27,8 @@ labels = data_overview['Classification'].tolist()
 ages = data_overview['Age'].tolist()
 genders = data_overview['Gender'].tolist()
 
+
+
 # Dataset class
 class HeartClassification(Dataset):
     def __init__(self, file_paths, labels, ages, genders, transform=None):
@@ -102,6 +104,7 @@ class MultimodalDenseNet(torch.nn.Module):
         meta_features = self.meta_branch(meta)
         combined = torch.cat((img_features, meta_features), dim=1)
         return self.classifier(combined)
+
 
 # Training and validation loop
 def train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs, writer, fold):
