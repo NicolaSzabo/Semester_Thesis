@@ -12,31 +12,32 @@ RELEVANT_MASKS = [
     "pulmonary_artery.nii.gz"
 ]
 
-def crop_around_mask(data, mask, reference_masks=None, padding=50):
-    if reference_masks:
-        # Combine all reference masks to determine the bounding box
-        combined_reference_mask = np.zeros(mask.shape)
-        for ref_mask in reference_masks:
-            combined_reference_mask = np.maximum(combined_reference_mask, ref_mask)
-        non_zero_coords = np.where(combined_reference_mask > 0)
-    else:
-        # Use the main mask if no reference masks are provided
-        non_zero_coords = np.where(mask > 0)
+EXCLUDE_FROM_CROP = ["aorta.nii.gz"]  # Masks to include in values but exclude from cropping
+
+def crop_around_mask(data, combined_mask, padding=50):
+    # Find the non-zero coordinates in the combined mask
+    non_zero_coords = np.where(combined_mask > 0)
+
+    # Handle case where no non-zero values are found
+    if len(non_zero_coords[0]) == 0:
+        print("Warning: No non-zero values in cropping mask. Returning full image.")
+        return data, combined_mask, (0, data.shape[0] - 1, 0, data.shape[1] - 1, 0, data.shape[2] - 1)
 
     # Calculate the bounding box with padding
     x_min = max(non_zero_coords[0].min() - padding, 0)
-    x_max = min(non_zero_coords[0].max() + padding, mask.shape[0] - 1)
+    x_max = min(non_zero_coords[0].max() + padding, data.shape[0] - 1)
     y_min = max(non_zero_coords[1].min() - padding, 0)
-    y_max = min(non_zero_coords[1].max() + padding, mask.shape[1] - 1)
+    y_max = min(non_zero_coords[1].max() + padding, data.shape[1] - 1)
     z_min = max(non_zero_coords[2].min() - padding, 0)
-    z_max = min(non_zero_coords[2].max() + padding, mask.shape[2] - 1)
+    z_max = min(non_zero_coords[2].max() + padding, data.shape[2] - 1)
 
     # Crop the data using the bounding box
     cropped_data = data[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
+    cropped_mask = combined_mask[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
 
-    return cropped_data, (x_min, x_max, y_min, y_max, z_min, z_max)
+    return cropped_data, cropped_mask, (x_min, x_max, y_min, y_max, z_min, z_max)
 
-def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, padding=5):
+def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, padding=50):
     # List all CT files
     CT_files = [f for f in os.listdir(CT_directory) if f.endswith('.nii.gz')]
 
@@ -47,27 +48,42 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         # Construct the path to the patient’s mask folder (appending .nii.gz)
         patient_mask_folder = os.path.join(mask_directory, f"{patient_id}.nii.gz")
 
-        # Load and combine relevant masks for cropping
-        reference_masks = []
+        # Combine relevant masks
+        combined_mask = None
+        cropping_mask = None
         if os.path.isdir(patient_mask_folder):
             mask_files = os.listdir(patient_mask_folder)
             for mask_file in mask_files:
-                if mask_file in RELEVANT_MASKS:  # Include only relevant masks
-                    mask_path = os.path.join(patient_mask_folder, mask_file)
-                    mask_data = nib.load(mask_path).get_fdata()
-                    reference_masks.append(mask_data)
+                mask_path = os.path.join(patient_mask_folder, mask_file)
+                mask_data = nib.load(mask_path).get_fdata()
 
-        # Ensure we have at least one reference mask
-        if not reference_masks:
-            print(f"No valid reference masks found for {patient_id}. Using full CT volume.")
-            reference_masks = [np.zeros_like(nib.load(CT_path).get_fdata())]
+                # Include in the combined mask
+                if combined_mask is None:
+                    combined_mask = mask_data
+                else:
+                    combined_mask = np.maximum(combined_mask, mask_data)
+
+                # Include only RELEVANT_MASKS in cropping
+                if mask_file in RELEVANT_MASKS:
+                    if cropping_mask is None:
+                        cropping_mask = mask_data
+                    else:
+                        cropping_mask = np.maximum(cropping_mask, mask_data)
+
+        # Ensure we have a cropping mask
+        if cropping_mask is None:
+            print(f"No valid cropping masks found for {patient_id}. Skipping.")
+            continue
 
         # Load the CT image
         CT_img = nib.load(CT_path)
         CT_data = CT_img.get_fdata()
 
-        # Crop the original CT image using the reference masks
-        cropped_CT, bbox = crop_around_mask(CT_data, None, reference_masks=reference_masks, padding=padding)
+        # Apply the combined mask to retain only the values inside the mask
+        masked_CT = np.where(combined_mask > 0, CT_data, np.nan)
+
+        # Crop the masked CT image and mask based on the cropping mask
+        cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, cropping_mask, padding=padding)
 
         # Save the cropped CT image
         cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
@@ -76,10 +92,10 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
 if __name__ == '__main__':
-    CT_directory = 'Project/data/niftis_full_body'
-    mask_directory = 'Project/data/segmentation_heart'
-    output_directory = 'Project/data/masked_with_nan'
-    padding = 10  # Set padding around the ROI
+    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/niftis_full_body'
+    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/segmentation_heart'
+    output_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/masked_with_nan'
+    padding = 50  # Set padding around the ROI
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):
