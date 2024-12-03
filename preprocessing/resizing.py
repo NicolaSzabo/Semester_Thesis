@@ -60,7 +60,7 @@ def process_images(directory, output_directory, target_shape):
     for filename in os.listdir(directory):
         if filename.endswith('.nii.gz'):
             input_path = os.path.join(directory, filename)
-            output_filename = f"{os.path.splitext(filename)[0]}_processed.nii.gz"
+            output_filename = f"{os.path.splitext(filename)[0]}.nii.gz"
             output_path = os.path.join(output_directory, output_filename)
 
             # Load the image
@@ -89,14 +89,14 @@ def process_images(directory, output_directory, target_shape):
 
 if __name__ == '__main__':
     # Directory containing NIfTI images
-    directory = 'G://data//preprocessing//masked_with_nan//unhealthy'
-    output_directory = 'G://data//preprocessing//resized//unhealthy'
+    directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/masked_with_nan'
+    output_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/resized'
 
     # Find the maximum dimensions across all images
     max_x, max_y, max_z = find_max_dimensions(directory)
 
     # Define target shape based on the maximum dimensions or fixed shape
-    target_shape = (256, 256, 256)  # Use (max_x, max_y, max_z) if dynamic target shape is desired
+    target_shape = (512, 512, 512)  # Use (max_x, max_y, max_z) if dynamic target shape is desired
 
     # Process and pad all images to the target shape
-    process_images(directory, output_directory, target_shape)
+    #process_images(directory, output_directory, target_shape)

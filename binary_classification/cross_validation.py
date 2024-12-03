@@ -7,8 +7,8 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from monai.data import decollate_batch
-from monai.networks.nets import DenseNet121
-from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom
+from monai.networks.nets import DenseNet121, EfficientNetBN, ResNet
+from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize
 from monai.utils import set_determinism
 from omegaconf import OmegaConf
 from datetime import datetime
@@ -71,25 +71,27 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = os.path.join(data_dir, 'data_overview.xlsx')
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned.xlsx'
 
 data_overview = pd.read_excel(excel_path)
 
-file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, x)).tolist()
+file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
 labels = data_overview['Classification'].tolist()
 num_class = len(set(labels))
 class_names = sorted(set(labels))
+class_counts = pd.Series(labels).value_counts()
 
 print(f"Number of Classes: {num_class}")
+print(f"Number of files per class: {class_counts}")
 print(f"Total samples: {len(file_paths)}")
 print(f"Sample file path: {file_paths[0]}, Label: {labels[0]}")
-
 
 
 class HeartClassification(Dataset):
     def __init__(self, file_paths, labels, transform=None):
         self.file_paths = file_paths
-        self.labels = labels
+        self.label_to_index = {label: idx for idx, label in enumerate(sorted(set(labels)))}
+        self.labels = [self.label_to_index[label] for label in labels]  # Convert labels to integers
         self.transform = transform
 
     def __len__(self):
@@ -97,11 +99,12 @@ class HeartClassification(Dataset):
 
     def __getitem__(self, index):
         img = LoadImage(image_only=True)(self.file_paths[index])
-        
+
         if self.transform:
             img = self.transform(img)
         
-        label = self.labels[index]
+        label = torch.tensor(self.labels[index], dtype=torch.long)
+        img = img.to(torch.float32)
         
         return img, label
 
@@ -110,6 +113,7 @@ class HeartClassification(Dataset):
 # Dataset and transforms
 train_transform = Compose([
     EnsureChannelFirst(),
+    Resize(spatial_size=(256,256,256)),
     ScaleIntensity(),
     RandFlip(spatial_axis = 0, prob = 0.5),
     RandZoom(min_zoom = 0.9, max_zoom = 1.1, prob = 0.5),
@@ -142,6 +146,8 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
             inputs, labels = inputs.to(device, dtype = torch.float32), labels.to(device)
             optimizer.zero_grad()
             outputs = model(inputs)
+            if isinstance(outputs, tuple):
+                outputs = outputs[0]
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -201,17 +207,20 @@ def evaluate_model(model, val_loader, device, file_paths, labels, fold):
     X_val = [file_paths[i] for i in val_indices]  # Validation file paths
     y_val = [labels[i] for i in val_indices]  # Validation labels
 
+    # Convert `y_val` to integers
+    y_val = [dataset.label_to_index[label] for label in y_val]
+
     with torch.no_grad():
         for inputs, labels in val_loader:
             # Move data to the device
             inputs, labels = inputs.to(device), labels.to(device)
-            
+
             # Get model outputs
             outputs = model(inputs)
 
             # Calculate probabilities and predictions
-            probs = torch.softmax(outputs, dim = 1)  # Probabilities for each class
-            preds = torch.argmax(probs, dim = 1)
+            probs = torch.softmax(outputs, dim=1)  # Probabilities for each class
+            preds = torch.argmax(probs, dim=1)
 
             # Collect predictions and true labels
             all_preds.extend(preds.cpu().numpy())
@@ -235,8 +244,6 @@ def evaluate_model(model, val_loader, device, file_paths, labels, fold):
             })
 
     return np.array(y_val), all_preds, np.array(all_probs)
-
-
 
 
 
@@ -322,10 +329,15 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     train_loader = DataLoader(dataset, batch_size = batch_size, sampler = train_subsampler, num_workers = num_workers)
     val_loader = DataLoader(dataset, batch_size = batch_size, sampler = val_subsampler, num_workers = num_workers)
 
-    # Initialize model, criterion, and optimizer
-    model = DenseNet121(spatial_dims = 3, in_channels = 1, out_channels = num_class).to(device)
+    # Initialize ResNet18 for 3D data
+    model = DenseNet121(
+        spatial_dims=3,  # Use 3D ResNet
+        in_channels=1,  # Number of input channels (e.g., grayscale CT/MRI)
+        out_channels = num_class
+    ).to(device)
+
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = config.training.lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9)
 
     # Train and validate the model for this fold
     val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, config.training.epochs, device)

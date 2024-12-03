@@ -25,8 +25,8 @@ def replace_nan_in_nifti(input_folder, output_folder):
             print(f"Processed: {file_name}")
 
 # Paths for healthy subfolder
-input_path_healthy = "G://semester_thesis//Project//data//data_classification//unhealthy"
-output_path_healthy = "G://semester_thesis//Project//data//final//unhealthy"
+input_path_healthy = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/windowed_normalized'
+output_path_healthy = '/home/fit_member/Documents/NS_SemesterWork/Project/data_final'
 
 # Process the healthy folder
 replace_nan_in_nifti(input_path_healthy, output_path_healthy)

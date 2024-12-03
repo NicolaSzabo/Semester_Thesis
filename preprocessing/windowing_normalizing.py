@@ -9,8 +9,8 @@ LOWER_BOUND = WINDOW_CENTER - WINDOW_WIDTH / 2
 UPPER_BOUND = WINDOW_CENTER + WINDOW_WIDTH / 2
 
 # Define input and output directories
-input_dir = 'G://semester_thesis//Project//data//data_classification//healthy_resized'
-output_dir = 'G://semester_thesis//Project//data//final//healthy'
+input_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/resized'
+output_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/windowed_normalized'
 
 # Ensure the output directory exists
 if not os.path.exists(output_dir):
@@ -49,8 +49,8 @@ for file_name in os.listdir(input_dir):
         processed_image_data = window_and_normalize(image_data, LOWER_BOUND, UPPER_BOUND)
 
         # Create the new filename
-        base_name = file_name.split("_")[0]
-        output_file_name = f"{base_name}_healthy.nii.gz"
+        base_name = file_name.split(".")[0]
+        output_file_name = f"{base_name}.nii.gz"
         output_path = os.path.join(output_dir, output_file_name)
 
         # Save the processed image

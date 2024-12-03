@@ -1,4 +1,6 @@
 /data
+/data_final
+/data_test
 /results
 /runs
 config.yaml
