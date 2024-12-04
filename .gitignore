@@ -3,6 +3,7 @@
 /data_test
 /results
 /runs
+/Paper
 config.yaml
 config_cross_validation.yaml
 config_final_models.yaml
