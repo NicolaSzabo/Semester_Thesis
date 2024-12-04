@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from monai.data import decollate_batch
 from monai.networks.nets import DenseNet121, EfficientNetBN, ResNet
-from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize
+from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize, RandGaussianNoise
 from monai.utils import set_determinism
 from omegaconf import OmegaConf
 from datetime import datetime
@@ -117,6 +117,7 @@ train_transform = Compose([
     ScaleIntensity(),
     RandFlip(spatial_axis = 0, prob = 0.5),
     RandZoom(min_zoom = 0.9, max_zoom = 1.1, prob = 0.5),
+    RandGaussianNoise(prob = 0.5, mean = 0.0, std = 0.1),
 ])
 
 
@@ -333,11 +334,12 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     model = DenseNet121(
         spatial_dims=3,  # Use 3D ResNet
         in_channels=1,  # Number of input channels (e.g., grayscale CT/MRI)
-        out_channels = num_class
+        out_channels = num_class,
+        dropout_prob = 0.5
     ).to(device)
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9, weight_decay= 1e-5)
 
     # Train and validate the model for this fold
     val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, config.training.epochs, device)
