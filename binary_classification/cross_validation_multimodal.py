@@ -63,7 +63,7 @@ excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overv
 data_overview = pd.read_excel(excel_path)
 
 # Extract file paths, labels, and metadata
-file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, x)).tolist()
+file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
 labels = data_overview['Classification'].tolist()
 ages = data_overview['Age'].tolist()
 genders = data_overview['Gender'].tolist()
@@ -101,8 +101,12 @@ class HeartClassification(Dataset):
         meta = torch.tensor([age] + gender, dtype=torch.float32)
 
         # Label
-        label = self.labels[index]
+        LABEL_MAP = {'healthy': 0, 'pathological': 1}
 
+        label = self.labels[index]
+        if isinstance(label, str):
+            label = LABEL_MAP[label]  # Map string labels to integers
+        label = torch.tensor(label, dtype=torch.long)
         return img, meta, label
 
 # Define transforms
@@ -162,6 +166,8 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         correct_train = 0
         total_train = 0
         for inputs, meta, labels in train_loader:
+            labels = labels[0] if isinstance(labels, tuple) else labels
+
             inputs, meta, labels = inputs.to(device), meta.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(inputs, meta)

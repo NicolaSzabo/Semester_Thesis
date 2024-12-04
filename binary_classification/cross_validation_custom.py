@@ -67,7 +67,7 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_test.xlsx'
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned.xlsx'
 
 data_overview = pd.read_excel(excel_path)
 
@@ -108,7 +108,7 @@ class HeartClassification(Dataset):
 # Dataset and transforms
 train_transform = Compose([
     EnsureChannelFirst(),
-    Resize(spatial_size=(256, 256, 256)),
+    Resize(spatial_size=(256,256,256)),
     ScaleIntensity(),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
@@ -307,21 +307,17 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     class Custom3DCNN(nn.Module):
         def __init__(self, in_channels, num_classes):
             super(Custom3DCNN, self).__init__()
-            self.conv1 = Convolution(spatial_dims=3, in_channels=in_channels, out_channels=8, strides=1, kernel_size=3)
-            self.conv2 = Convolution(spatial_dims=3, in_channels=8, out_channels=16, strides=2, kernel_size=3)
-            self.conv3 = Convolution(spatial_dims=3, in_channels=16, out_channels=32, strides=2, kernel_size=3)
-            self.resblock = ResidualUnit(spatial_dims=3, in_channels=32, out_channels=32, strides=1, kernel_size=3)
+            self.conv1 = Convolution(spatial_dims=3, in_channels=in_channels, out_channels=4, strides=1, kernel_size=3)
+            self.conv2 = Convolution(spatial_dims=3, in_channels=4, out_channels=8, strides=2, kernel_size=3)
             self.fc = nn.Sequential(
                 nn.AdaptiveAvgPool3d(1),
                 nn.Flatten(),
-                nn.Linear(32, num_classes)
+                nn.Linear(8, num_classes)
             )
 
         def forward(self, x):
             x = self.conv1(x)
             x = self.conv2(x)
-            x = self.conv3(x)
-            x = self.resblock(x)
             x = self.fc(x)
             return x
 
