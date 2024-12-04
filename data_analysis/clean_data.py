@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 # Load the data
-file_path = './/data//data_overview.xlsx'  # Replace with your actual file path
+file_path = './/data//data_overview_binary_cleaned.xlsx'    # Replace with your actual file path
 data = pd.read_excel(file_path)
 
 
@@ -14,7 +14,7 @@ current_year = datetime.now().year
 data['Age'] = current_year - data['Year of birth']
 
 # Save the updated data back to Excel
-data.to_excel('.//data//data_overview.xlsx', index=False)
+data.to_excel('.//data//data_overview.xlsx'  , index=False)
 
 
 # Filter the data based on conditions
