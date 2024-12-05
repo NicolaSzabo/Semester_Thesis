@@ -71,7 +71,7 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned.xlsx'
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
 
 data_overview = pd.read_excel(excel_path)
 
@@ -113,7 +113,6 @@ class HeartClassification(Dataset):
 # Dataset and transforms
 train_transform = Compose([
     EnsureChannelFirst(),
-    Resize(spatial_size=(256,256,256)),
     ScaleIntensity(),
     RandFlip(spatial_axis = 0, prob = 0.5),
     RandZoom(min_zoom = 0.9, max_zoom = 1.1, prob = 0.5),
@@ -339,7 +338,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     ).to(device)
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9, weight_decay= 1e-5)
+    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9)
 
     # Train and validate the model for this fold
     val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, config.training.epochs, device)
