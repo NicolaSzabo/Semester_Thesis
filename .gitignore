@@ -5,6 +5,7 @@
 /data_test
 /results
 /runs
+.idea/
 /Paper
 config.yaml
 config_cross_validation.yaml
