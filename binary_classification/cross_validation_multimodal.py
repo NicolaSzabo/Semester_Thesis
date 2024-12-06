@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
-from monai.networks.nets import DenseNet121
+from monai.networks.nets import DenseNet121, DenseNet169
 from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize, RandGaussianNoise
 from sklearn.model_selection import KFold
 from torch.utils.tensorboard import SummaryWriter
@@ -12,6 +12,7 @@ from omegaconf import OmegaConf
 from sklearn.metrics import confusion_matrix, roc_curve, precision_recall_curve, auc
 import seaborn as sns
 import matplotlib.pyplot as plt
+from torchvision.models import DenseNet
 
 # Check CUDA availability
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -58,7 +59,7 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned.xlsx'
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
 
 data_overview = pd.read_excel(excel_path)
 
@@ -112,7 +113,7 @@ class HeartClassification(Dataset):
 # Define transforms
 train_transform = Compose([
     EnsureChannelFirst(),
-    Resize(spatial_size=(256,256,256)),
+    Resize(spatial_size=(128,128,128)),
     ScaleIntensity(),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
@@ -146,7 +147,7 @@ class MultimodalDenseNet(torch.nn.Module):
         self.classifier = torch.nn.Sequential(
             torch.nn.Linear(128 + 32, 64),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
+            torch.nn.Dropout(0.5),
             torch.nn.Linear(64, num_classes)
         )
 
