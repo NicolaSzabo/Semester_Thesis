@@ -66,17 +66,25 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_by_hand.xlsx'
 
 data_overview = pd.read_excel(excel_path)
 
 file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
-labels = data_overview['Calcification'].apply(lambda x: 1 if x == 'yes' else 0).tolist()
-num_class = len(set(labels))
+
+labels = data_overview['Calcification'].tolist()
 class_names = ['no', 'yes']
 class_counts = pd.Series(labels).value_counts()
+num_classes = len(class_counts)
+total_samples = len(labels)
 
-print(f"Number of Classes: {num_class}")
+class_weights = torch.tensor(
+    [total_samples / (count * num_classes) for count in class_counts],
+    dtype = torch.float
+).to(device)
+
+
+print(f"Number of Classes: {num_classes}")
 print(f"Number of files per class: {class_counts}")
 print(f"Total samples: {len(file_paths)}")
 print(f"Sample file path: {file_paths[0]}, Label: {labels[0]}")
@@ -108,6 +116,7 @@ class HeartClassification(Dataset):
 train_transform = Compose([
     EnsureChannelFirst(),
     ScaleIntensity(),
+    Resize(spatial_size=(256, 256, 256)),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
     RandGaussianNoise(prob=0.5, mean=0.0, std=0.1),
@@ -306,11 +315,11 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     model = DenseNet121(
         spatial_dims=3,  # Use 3D ResNet
         in_channels=1,  # Number of input channels (e.g., grayscale CT/MRI)
-        out_channels=num_class,
+        out_channels=num_classes,
         dropout_prob=0.5
     ).to(device)
 
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(weight = class_weights)
     optimizer = torch.optim.SGD(model.parameters(), lr=config.training.lr, momentum=0.9)
 
     # Train and validate the model for this fold
