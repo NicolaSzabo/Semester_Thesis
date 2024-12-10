@@ -72,7 +72,7 @@ excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_by_ha
 data_overview = pd.read_excel(excel_path)
 
 # Filter rows where 'final_data_good' is 'yes'
-filtered_data = data_overview[data_overview['final_data_good'] == 'yes']
+filtered_data = data_overview[data_overview['final_data_good_streng'] == 'yes']
 
 # Prepare file paths and labels
 file_paths = filtered_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
@@ -82,6 +82,7 @@ labels = filtered_data['Calcification'].tolist()
 class_counts = pd.Series(labels).value_counts()
 num_classes = len(class_counts)
 total_samples = len(labels)
+class_names = ['no', 'yes']
 
 # Compute class weights
 class_weights = torch.tensor(
