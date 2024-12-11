@@ -1,39 +1,22 @@
-import pandas as pd
 import os
+import pandas as pd
 
-def create_folders_from_excel(file_path, column_name, output_directory):
-    """
-    Creates folders based on the values in a specified column of an Excel file.
-    
-    Parameters:
-    - file_path (str): Path to the Excel file.
-    - column_name (str): The name of the column containing folder names.
-    - output_directory (str): Path where folders will be created.
-    """
-    # Load the Excel file
-    data = pd.read_excel(file_path)
-    print(data.columns)  # Print the column names
-    
-    # Ensure the output directory exists
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-    
-    # Loop through the values in the specified column and create folders
-    for folder_name in data[column_name]:
-        folder_path = os.path.join(output_directory, str(folder_name))
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            print(f"Folder created: {folder_path}")
-        else:
-            print(f"Folder already exists: {folder_path}")
+# Path to the Excel file and NIfTI folder
+excel_path = 'G://data//data_overview_binary_cleaned_256.xlsx'  # Replace with your actual Excel file path
+nifti_folder = 'G://data_final_without_aorta'      # Replace with your actual folder path
 
-# Example usage
-if __name__ == "__main__":
-    # Path to your Excel file
-    file_path = "C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//data_overview.xlsx"
-    # Column name containing the folder names (e.g., "Nr" from your table)
-    column_name = "Nr"
-    # Path where the folders should be created
-    output_directory = "G://create_nifti_files"
-    
-    create_folders_from_excel(file_path, column_name, output_directory)
+# Load the Excel file
+data = pd.read_excel(excel_path)
+
+# List all NIfTI file names in the folder
+nifti_files = [f.replace('.nii.gz', '') for f in os.listdir(nifti_folder) if f.endswith('.nii.gz')]
+
+# Compare Excel column 'Nr' with the NIfTI file names
+data['data_without_aorta'] = data['Nr'].apply(lambda x: 'yes' if str(x) in nifti_files else 'no')
+
+# Save the updated DataFrame (optional)
+output_path = 'G://data//data_overview_binary_cleaned_256.xlsx'
+data.to_excel(output_path, index=False)
+
+# Print the updated DataFrame
+print(data)

@@ -15,13 +15,17 @@ RELEVANT_MASKS = [
 EXCLUDE_FROM_CROP = ["aorta.nii.gz"]  # Masks to include in values but exclude from cropping
 
 def crop_around_mask(data, combined_mask, padding=50):
+    """
+    Crop the data around the non-zero values of the combined mask.
+    If no valid non-zero values are found, return None to signal skipping.
+    """
     # Find the non-zero coordinates in the combined mask
     non_zero_coords = np.where(combined_mask > 0)
 
     # Handle case where no non-zero values are found
     if len(non_zero_coords[0]) == 0:
-        print("Warning: No non-zero values in cropping mask. Returning full image.")
-        return data, combined_mask, (0, data.shape[0] - 1, 0, data.shape[1] - 1, 0, data.shape[2] - 1)
+        print("Warning: No non-zero values in cropping mask. Skipping this file.")
+        return None, None, None  # Return None to signal skipping
 
     # Calculate the bounding box with padding
     x_min = max(non_zero_coords[0].min() - padding, 0)
@@ -36,6 +40,9 @@ def crop_around_mask(data, combined_mask, padding=50):
     cropped_mask = combined_mask[x_min:x_max+1, y_min:y_max+1, z_min:z_max+1]
 
     return cropped_data, cropped_mask, (x_min, x_max, y_min, y_max, z_min, z_max)
+
+
+
 
 def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_directory, padding=50):
     # List all CT files
@@ -54,6 +61,9 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         if os.path.isdir(patient_mask_folder):
             mask_files = os.listdir(patient_mask_folder)
             for mask_file in mask_files:
+                if mask_file in EXCLUDE_FROM_CROP:  # Skip excluded masks
+                    continue
+                
                 mask_path = os.path.join(patient_mask_folder, mask_file)
                 mask_data = nib.load(mask_path).get_fdata()
 
@@ -82,8 +92,13 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         # Apply the combined mask to retain only the values inside the mask
         masked_CT = np.where(combined_mask > 0, CT_data, np.nan)
 
-        # Crop the masked CT image and mask based on the cropping mask
+         # Crop the masked CT image and mask based on the cropping mask
         cropped_CT, cropped_mask, bbox = crop_around_mask(masked_CT, cropping_mask, padding=padding)
+
+        # Skip the file if no valid cropping mask was found
+        if cropped_CT is None or cropped_mask is None:
+            print(f"Skipping {CT_filename} due to no valid cropping mask.")
+            continue
 
         # Save the cropped CT image
         cropped_img = nib.Nifti1Image(cropped_CT, CT_img.affine)
@@ -92,10 +107,10 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
 if __name__ == '__main__':
-    CT_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/niftis_full_body'
-    mask_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/segmentation_heart'
-    output_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/masked_with_nan'
-    padding = 50  # Set padding around the ROI
+    CT_directory = "G://data//niftis_full_body"
+    mask_directory = "G://data//segmentation_heart"
+    output_directory = "G://data//preprocessing//masked_without_aorta"
+    padding = 0  # Set padding around the ROI
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_directory):

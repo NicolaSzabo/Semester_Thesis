@@ -58,9 +58,9 @@ def process_files_from_excel(excel_path, input_folder, output_folder):
 
 
 # Paths
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned.xlsx'
-input_folder = '/home/fit_member/Documents/NS_SemesterWork/Project/data/preprocessing/windowed_normalized'
-output_folder = '/home/fit_member/Documents/NS_SemesterWork/Project/data_final'
+excel_path = 'G://data/data_overview_binary_cleaned.xlsx'
+input_folder = "G://data//preprocessing//windowed_normalized_without_aorta"
+output_folder = "G://data_final_without_aorta"
 
 # Process files
 process_files_from_excel(excel_path, input_folder, output_folder)
