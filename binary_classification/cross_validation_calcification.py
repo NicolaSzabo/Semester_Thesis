@@ -68,21 +68,27 @@ os.makedirs(run_dir, exist_ok=True)
 data_dir = config.dataset.data_dir
 excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_by_hand.xlsx'
 
+# Load data overview
 data_overview = pd.read_excel(excel_path)
 
-file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
+# Filter rows where 'final_data_good' is 'yes'
+filtered_data = data_overview[data_overview['final_data_good_streng'] == 'yes']
 
-labels = data_overview['Calcification'].tolist()
-class_names = ['no', 'yes']
+# Prepare file paths and labels
+file_paths = filtered_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
+labels = filtered_data['Calcification'].tolist()
+
+# Update class statistics
 class_counts = pd.Series(labels).value_counts()
 num_classes = len(class_counts)
 total_samples = len(labels)
+class_names = ['no', 'yes']
 
+# Compute class weights
 class_weights = torch.tensor(
     [total_samples / (count * num_classes) for count in class_counts],
-    dtype = torch.float
+    dtype=torch.float
 ).to(device)
-
 
 print(f"Number of Classes: {num_classes}")
 print(f"Number of files per class: {class_counts}")
