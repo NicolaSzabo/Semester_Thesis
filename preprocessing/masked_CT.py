@@ -107,9 +107,9 @@ def mask_overlay_with_dynamic_crop(CT_directory, mask_directory, output_director
         print(f"Processed and saved: {output_path} with bounding box {bbox}")
 
 if __name__ == '__main__':
-    CT_directory = "G://data//niftis_full_body"
-    mask_directory = "G://data//segmentation_heart"
-    output_directory = "G://data//preprocessing//masked_without_aorta"
+    CT_directory = "G://data//niftis_heart"
+    mask_directory = "G://data//segmentation_heart_specific"
+    output_directory = "G://data//preprocessing//masked_heart_specific"
     padding = 0  # Set padding around the ROI
 
     # Create the output directory if it doesn't exist

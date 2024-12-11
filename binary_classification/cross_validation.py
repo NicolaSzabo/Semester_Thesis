@@ -31,19 +31,19 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 # Configuration and paths
-config = OmegaConf.load('/home/fit_member/Documents/NS_SemesterWork/Project/config_cross_validation.yaml') 
+config = OmegaConf.load('C://Users//nicol//OneDrive//Desktop//Semester_thesis//config_cross_validation.yaml') 
 # DIRECTORY: 
-# Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/config.yaml'
-# Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//config.yaml'
+# '/home/fit_member/Documents/NS_SemesterWork/Project/config_cross_validation.yaml'
+# 'C://Users//nicol//OneDrive//Desktop//Semester_thesis//config_cross_validation.yaml'
 print(OmegaConf.to_yaml(config))
 
 start_time = datetime.now()
 start_time_str = start_time.strftime('%Y-%d-%m_%H-%M')
 
-def log_results(config, start_time, end_time, duration, file_path = '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation/results_cross_validation.yaml'):
+def log_results(config, start_time, end_time, duration, file_path = 'C://Users//nicol//OneDrive//Desktop//Semester_thesis//results//cross_validation//results_cross_validation.yaml'):
     # DIRECTORY:
-    # Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results/results_log.yaml'
-    # Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results//results_log.yaml'
+    # '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation/results_cross_validation.yaml'
+    # 'C://Users//nicol//OneDrive//Desktop//Semester_thesis//results//cross_validation//results_cross_validation.yaml'
     timestamp = datetime.now().strftime('%Y-%d-%m_%H-%M')
     results = {
         'run_id': f"Run_{timestamp}",
@@ -59,11 +59,10 @@ def log_results(config, start_time, end_time, duration, file_path = '/home/fit_m
 
 
 
-
-base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation'
+base_results_dir = 'C://Users//nicol//OneDrive//Desktop//Semester_Thesis//results//cross_validation'
 # DIRECTORY:
-# Linux: '/home/fit_member/Documents/NS_SemesterWork/Project/results'
-# Windows: 'C://Users//nicol//OneDrive//Desktop//semester_thesis//Project//results'
+# '/home/fit_member/Documents/NS_SemesterWork/Project/results/cross_validation'
+# 'C://Users//nicol//OneDrive//Desktop//Semester_Thesis//results//cross_validation'
 run_dir = os.path.join(base_results_dir, f"run_{start_time.strftime('%Y-%d-%m_%H-%M')}")
 os.makedirs(run_dir, exist_ok=True)
 
@@ -71,12 +70,20 @@ os.makedirs(run_dir, exist_ok=True)
 
 # Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
+excel_path = "G://data//data_overview_binary_cleaned_256.xlsx"
+# DIRECTORY:
+# '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
+# "G://data//data_overview_binary_cleaned_256.xlsx"
 
 data_overview = pd.read_excel(excel_path)
 
-file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
-labels = data_overview['Classification'].tolist()
+filtered_data = data_overview[data_overview['quality'] == 'good']
+filtered_data = data_overview[data_overview['data_without_aorta'] == 'yes']
+
+
+file_paths = filtered_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
+labels = filtered_data['Classification'].tolist()
+
 num_class = len(set(labels))
 class_names = sorted(set(labels))
 class_counts = pd.Series(labels).value_counts()
@@ -314,11 +321,11 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     print(f"Fold {fold + 1}/{k_folds}")
     torch.cuda.empty_cache()
 
-    log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/cross_validation/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+    log_dir = r"C:\Users\nicol\OneDrive\Desktop\Semester_thesis\runs\cross_validation\experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}\fold_{fold + 1}"
 
     # DIRECTORY:
-    # Linux: f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
-    # Windows: r"C:\Users\nicol\OneDrive\Desktop\semester_thesis\Project\runs\experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}\fold_{fold + 1}"
+    # f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/cross_validation/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
+    # r"C:\Users\nicol\OneDrive\Desktop\Semester_thesis\runs\cross_validation\experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}\fold_{fold + 1}"
     writer = SummaryWriter(log_dir=log_dir)
 
     # Subset samplers for train and validation splits

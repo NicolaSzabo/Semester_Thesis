@@ -55,32 +55,16 @@ base_results_dir = '/home/fit_member/Documents/NS_SemesterWork/Project/results/c
 run_dir = os.path.join(base_results_dir, f"run_{start_time.strftime('%Y-%d-%m_%H-%M')}")
 os.makedirs(run_dir, exist_ok=True)
 
-
-
-# Prepare data
 data_dir = config.dataset.data_dir
-excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
-
-data_overview = pd.read_excel(excel_path)
-
-# Extract file paths, labels, and metadata
-file_paths = data_overview['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
-labels = data_overview['Classification'].tolist()
-ages = data_overview['Age'].tolist()
-genders = data_overview['Gender'].tolist()
-num_class = len(set(labels))
-class_names = sorted(set(labels))
-class_counts = pd.Series(labels).value_counts()
 
 
 
-# Dataset class
+# Update Dataset to Include Volumes
 class HeartClassification(Dataset):
-    def __init__(self, file_paths, labels, ages, genders, transform=None):
+    def __init__(self, file_paths, labels, volumes, transform=None):
         self.file_paths = file_paths
         self.labels = labels
-        self.ages = ages
-        self.genders = genders
+        self.volumes = volumes  # Volume column as metadata
         self.transform = transform
 
     def __len__(self):
@@ -92,60 +76,52 @@ class HeartClassification(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        # Normalize age
-        age = (self.ages[index] - min(self.ages)) / (max(self.ages) - min(self.ages))
-
-        # One-hot encode gender
-        gender = [1, 0] if self.genders[index] == 'm' else [0, 1]
-
-        # Combine metadata
-        meta = torch.tensor([age] + gender, dtype=torch.float32)
+        # Normalize volume
+        volume = (self.volumes[index] - min(self.volumes)) / (max(self.volumes) - min(self.volumes))
+        meta = torch.tensor([volume], dtype=torch.float32)
 
         # Label
         LABEL_MAP = {'healthy': 0, 'pathological': 1}
-
-        label = self.labels[index]
-        if isinstance(label, str):
-            label = LABEL_MAP[label]  # Map string labels to integers
+        label = LABEL_MAP[self.labels[index]]
         label = torch.tensor(label, dtype=torch.long)
+
         return img, meta, label
+
+
 
 # Define transforms
 train_transform = Compose([
     EnsureChannelFirst(),
-    Resize(spatial_size=(128,128,128)),
     ScaleIntensity(),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
     RandGaussianNoise(prob = 0.5, mean = 0.0, std = 0.1),
 ])
 
-# Create dataset
-dataset = HeartClassification(file_paths, labels, ages, genders, transform=train_transform)
 
-# Define the multimodal model
+# Updated Multimodal Model
 class MultimodalDenseNet(torch.nn.Module):
     def __init__(self, num_classes):
         super(MultimodalDenseNet, self).__init__()
-        # Image branch (DenseNet121)
+        # Image branch
         self.image_branch = DenseNet121(
             spatial_dims=3,
-            dropout_prob= 0.5,
+            dropout_prob=0.5,
             in_channels=1,
             out_channels=128  # Intermediate feature size
         )
 
-        # Metadata branch (MLP)
+        # Metadata branch (1 input for volume)
         self.meta_branch = torch.nn.Sequential(
-            torch.nn.Linear(3, 16),
+            torch.nn.Linear(1, 8),
             torch.nn.ReLU(),
-            torch.nn.Linear(16, 32),
+            torch.nn.Linear(8, 16),
             torch.nn.ReLU()
         )
 
         # Combined classifier
         self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(128 + 32, 64),
+            torch.nn.Linear(128 + 16, 64),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(64, num_classes)
@@ -156,6 +132,19 @@ class MultimodalDenseNet(torch.nn.Module):
         meta_features = self.meta_branch(meta)
         combined = torch.cat((img_features, meta_features), dim=1)
         return self.classifier(combined)
+
+
+# Load the Excel file and extract volumes
+excel_data = pd.read_excel('/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx')
+
+# Filter for good quality and extract relevant columns
+good_quality_data = excel_data[excel_data['quality'] == 'good']
+file_paths = good_quality_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
+labels = good_quality_data['Classification'].tolist()
+volumes = good_quality_data['Volume_mL'].tolist()  # Use precomputed volumes
+
+# Dataset and DataLoader
+dataset = HeartClassification(file_paths, labels, volumes, transform=train_transform)
 
 
 # Training and validation loop

@@ -9,8 +9,8 @@ LOWER_BOUND = WINDOW_CENTER - WINDOW_WIDTH / 2
 UPPER_BOUND = WINDOW_CENTER + WINDOW_WIDTH / 2
 
 # Define input and output directories
-input_dir = "G://data//preprocessing//resized_without_aorta"
-output_dir = "G://data//preprocessing//windowed_normalized_without_aorta"
+input_dir = "G://data//preprocessing//resized_heart_specific"
+output_dir = "G://data//preprocessing//windowed_normalized_heart_specific"
 
 # Ensure the output directory exists
 if not os.path.exists(output_dir):

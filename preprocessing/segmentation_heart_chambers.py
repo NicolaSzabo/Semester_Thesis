@@ -37,8 +37,10 @@ if __name__ == '__main__':
     # Check if GPU is available
     print(torch.cuda.is_available())
     
-    input_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/niftis_full_body'
-    output_directory = '/home/fit_member/Documents/NS_SemesterWork/Project/data/segmentation_heart'
+    input_directory = "G://data//niftis_heart"
+    # '/home/fit_member/Documents/NS_SemesterWork/Project/data/niftis_heart'
+    output_directory = "G://data//segmentation_heart_specific"
+    # '/home/fit_member/Documents/NS_SemesterWork/Project/data/segmentation_heart'
     
     # Call the segmentation function
     segment_images(input_directory, output_directory)
