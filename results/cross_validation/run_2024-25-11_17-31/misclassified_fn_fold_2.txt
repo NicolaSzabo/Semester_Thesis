@@ -1,0 +1,3 @@
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/20-0181_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/20-0181_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-1664_healthy.nii.gz

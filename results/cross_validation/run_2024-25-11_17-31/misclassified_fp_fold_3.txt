@@ -1,0 +1,16 @@
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/21-1850_healthy.nii.gz
+/home/fit_member/Documents/NS_SemesterWork/Project/data/final/healthy/17-0960_healthy.nii.gz

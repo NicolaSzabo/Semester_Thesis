@@ -94,7 +94,6 @@ class HeartClassification(Dataset):
 train_transform = Compose([
     EnsureChannelFirst(),
     ScaleIntensity(),
-    Resize(spatial_size=(128,128,128)),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
     RandGaussianNoise(prob = 0.5, mean = 0.0, std = 0.1),

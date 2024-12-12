@@ -1,0 +1,180 @@
+run_id: Run_2024-19-11_23-11
+start_time: 2024-19-11_15-21
+end_time: 2024-19-11_23-11
+duration: '7:49:41.877109'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data/final
+    batch_size: 2
+    num_workers: 0
+  training:
+    epochs: 30
+    lr: 0.0001
+run_id: Run_2024-25-11_09-09
+
+
+
+run_id: Run_2024-26-11_04-05
+start_time: 2024-25-11_17-31
+end_time: 2024-26-11_04-05
+duration: '10:34:47.700269'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data/final
+    batch_size: 2
+    num_workers: 0
+  training:
+    k_folds: 5
+    epochs: 50
+    lr: 0.0001
+
+
+
+run_id: Run_2024-27-11_09-33
+start_time: 2024-26-11_12-20
+end_time: 2024-27-11_09-33
+duration: '21:12:31.298836'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data/final
+    batch_size: 2
+    num_workers: 0
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.0001
+
+
+
+comments: cross_validaton.py, first cross validation using the new data, resizing to 256x256x256
+run_id: Run_2024-04-12_09-57
+start_time: 2024-03-12_16-09
+end_time: 2024-04-12_09-57
+duration: '17:47:25.701358'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final/
+    batch_size: 2
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.01
+
+
+comments: cross_validation.py, still 256x256x256, but to prevent overfitting dropout = 0.5, GaussianNoise augmentation and weight_decay = 1e-5 were added
+result: called run_2024-04-12_09_58, only first fold then interrupted
+start_time: 2024-04-12_09-58
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final/
+    batch_size: 2
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.01
+
+
+comments: cross_validation_custom.py, had to resize to 256x256x256, but batch size of 16 possible at least.
+start_time: 2024-04-12_18-06
+end_time: interrupted after 4 folds, 05-12 at around 11:30
+duration: '...'
+dataset:
+  data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final/
+  batch_size: 16
+  num_workers: 48
+training:
+  k_folds: 5
+  epochs: 100
+  lr: 0.01
+
+
+comments: cross_validation.py, on new data called data_final_256, data is now 256x256x256 without Resize method, no weight_decay, but with Gaussian Noise and dropout = 0.5
+run_id: Run_2024-05-12_23-10
+start_time: 2024-05-12_12-49
+end_time: 2024-05-12_23-10
+duration: '10:21:12.936177'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_256/
+    batch_size: 2
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.01
+
+
+comments: cross_validation_calcification.py, same cross_validation but labels adapted to calcification instead of classification, also added a loss weight due to imbalanced data.
+run_id: Run_2024-08-12_20-18
+start_time: 2024-06-12_17-26
+end_time: 2024-08-12_20-18
+duration: 2 days, 2:51:40.921996
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_256/
+    batch_size: 2
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 500
+    lr: 0.01
+
+
+
+comments: cross_validation_calcification, on the normal data again, resizing to 256x256x256
+run_id: Run_2024-10-12_20-13
+start_time: 2024-10-12_10-25
+end_time: 2024-10-12_20-13
+duration: '9:48:13.624343'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final/
+    batch_size: 2
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.01
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+comments: cross_validation_multimodal, using the volumes and resized to (128x128,128), like that batch of 16 is possible.
+run_id: Run_2024-12-12_13-32
+start_time: 2024-12-12_10-19
+end_time: 2024-12-12_13-32
+duration: '3:13:39.121863'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta/
+    batch_size: 16
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.0001
+
+
+
+
+
+comments:
