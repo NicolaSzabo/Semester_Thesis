@@ -61,6 +61,8 @@ data_dir = config.dataset.data_dir
 
 # Update Dataset to Include Volumes
 class HeartClassification(Dataset):
+    LABEL_MAP = {'healthy': 0, 'pathological': 1}
+
     def __init__(self, file_paths, labels, volumes, transform=None):
         self.file_paths = file_paths
         self.labels = labels
@@ -81,8 +83,7 @@ class HeartClassification(Dataset):
         meta = torch.tensor([volume], dtype=torch.float32)
 
         # Label
-        LABEL_MAP = {'healthy': 0, 'pathological': 1}
-        label = LABEL_MAP[self.labels[index]]
+        label = self.LABEL_MAP[self.labels[index]]
         label = torch.tensor(label, dtype=torch.long)
 
         return img, meta, label
@@ -93,6 +94,7 @@ class HeartClassification(Dataset):
 train_transform = Compose([
     EnsureChannelFirst(),
     ScaleIntensity(),
+    Resize(spatial_size=(128,128,128)),
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
     RandGaussianNoise(prob = 0.5, mean = 0.0, std = 0.1),
@@ -143,12 +145,29 @@ file_paths = good_quality_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x
 labels = good_quality_data['Classification'].tolist()
 volumes = good_quality_data['Volume_mL'].tolist()  # Use precomputed volumes
 
+num_class = len(set(labels))
+class_names = sorted(set(labels))
+class_counts = pd.Series(labels).value_counts()
+
+
+print(f"Number of Classes: {num_class}")
+print(f"Number of files per class: {class_counts}")
+print(f"Total samples: {len(file_paths)}")
+print(f"Sample file path: {file_paths[0]}, Label: {labels[0]}")
+
+
 # Dataset and DataLoader
 dataset = HeartClassification(file_paths, labels, volumes, transform=train_transform)
+k_folds = config.training.k_folds
+batch_size = config.dataset.batch_size
+num_workers = config.dataset.num_workers
+
+
+
 
 
 # Training and validation loop
-def train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs, writer, fold):
+def train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs):
     for epoch in range(epochs):
         # Training
         model.train()
@@ -172,7 +191,7 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
 
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = correct_train.double() / total_train
-        print(f"Fold {fold + 1}, Epoch {epoch + 1}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_acc:.4f}")
+        print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_acc:.4f}")
         writer.add_scalar('Loss/train', epoch_loss, epoch)
         writer.add_scalar('Accuracy/train', epoch_acc, epoch)
 
@@ -194,7 +213,7 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
 
         val_loss /= len(val_loader.dataset)
         val_acc = correct_val.double() / total_val
-        print(f"Fold {fold + 1}, Epoch {epoch + 1}: Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
+        print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
         writer.add_scalar('Loss/val', val_loss, epoch)
         writer.add_scalar('Accuracy/val', val_acc, epoch)
 
@@ -217,21 +236,23 @@ def evaluate_model(model, val_loader, device, file_paths, labels, fold):
     y_val = [labels[i] for i in val_indices]  # Validation labels
 
     # Convert `y_val` to integers
-    y_val = [dataset.label_to_index[label] for label in y_val]
+    y_val = [dataset.LABEL_MAP[label] for label in y_val]
 
     with torch.no_grad():
-        for inputs, labels in val_loader:
-            # Move data to the device
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, meta, labels in val_loader:
+            # Move all inputs to the same device
+            inputs = inputs.to(device)
+            meta = meta.to(device)  # Explicitly move metadata
+            labels = labels.to(device)
 
-            # Get model outputs
-            outputs = model(inputs)
+            # Forward pass
+            outputs = model(inputs, meta)
 
-            # Calculate probabilities and predictions
-            probs = torch.softmax(outputs, dim=1)  # Probabilities for each class
+            # Compute predictions and probabilities
+            probs = torch.softmax(outputs, dim=1)
             preds = torch.argmax(probs, dim=1)
 
-            # Collect predictions and true labels
+            # Collect results
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
@@ -307,11 +328,11 @@ def plot_roc_prc(y_true, y_probs, class_names, fold):
 
 
 # K-Fold Cross Validation
-kfold = KFold(n_splits=5, shuffle=True, random_state=0)
+kfold = KFold(n_splits=k_folds, shuffle=True, random_state=0)
 fold_results = []
 
 for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
-    print(f"Fold {fold + 1}/5")
+    print(f"Fold {fold + 1}/{k_folds}")
 
     log_dir = f"/home/fit_member/Documents/NS_SemesterWork/Project/runs/cross_validation/experiment_{start_time.strftime('%Y-%d-%m_%H-%M')}/fold_{fold + 1}"
     writer = SummaryWriter(log_dir=log_dir)
@@ -319,15 +340,15 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     train_subsampler = SubsetRandomSampler(train_idx)
     val_subsampler = SubsetRandomSampler(val_idx)
 
-    train_loader = DataLoader(dataset, batch_size=4, sampler=train_subsampler, num_workers=2)
-    val_loader = DataLoader(dataset, batch_size=4, sampler=val_subsampler, num_workers=2)
+    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_subsampler, num_workers=num_workers)
+    val_loader = DataLoader(dataset, batch_size=batch_size, sampler=val_subsampler, num_workers=num_workers)
 
     model = MultimodalDenseNet(num_classes=2).to(device)
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9)
 
 
-    val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, epochs=10, writer=writer, fold=fold)
+    val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, config.training.epochs)
     fold_results.append({'fold': fold, 'val_loss': val_loss, 'val_acc': val_acc})
     torch.save(model.state_dict(), os.path.join(run_dir, f"model_fold_{fold}.pth"))
 
