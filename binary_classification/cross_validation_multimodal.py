@@ -345,7 +345,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
 
     model = MultimodalDenseNet(num_classes=2).to(device)
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr = config.training.lr, momentum = 0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr = config.training.lr)
 
 
     val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer, config.training.epochs)
