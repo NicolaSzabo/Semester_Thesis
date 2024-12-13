@@ -177,4 +177,16 @@ config:
 
 
 
-comments: efficientnet cross_validation.py, 2D Multi-View EfficientNet
+comments: efficientnet cross_validation.py, 2D Multi-View EfficientNetrun_id: Run_2024-12-12_22-34
+start_time: 2024-12-12_18-00
+end_time: 2024-12-12_22-34
+duration: '4:34:36.219616'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta/
+    batch_size: 32
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 250
+    lr: 0.0001
