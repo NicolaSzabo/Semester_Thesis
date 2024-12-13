@@ -155,35 +155,39 @@ class MultimodalEfficientNet(torch.nn.Module):
     def __init__(self, num_classes):
         super(MultimodalEfficientNet, self).__init__()
 
-        # Image branch: EfficientNet
-        self.image_branch = EfficientNet.from_pretrained(
-            "efficientnet-b0",  # Pretrained EfficientNet
-            in_channels=3,  # 3 input channels for coronal, axial, sagittal views
-            num_classes=128  # Intermediate feature output size
-        )
+        # EfficientNet Feature-Extractor (ohne Klassifikations-Layer)
+        self.image_branch = EfficientNet.from_pretrained("efficientnet-b0", in_channels=3)
+        self.image_branch._fc = torch.nn.Identity()  # Entferne das letzte Linear-Layer
+        self.image_fc = torch.nn.Linear(1280, 128)   # Reduziere 1280-Features zu 128-Features
 
-        # Metadata branch (1 input for volume)
+        # Metadata branch
         self.meta_branch = torch.nn.Sequential(
             torch.nn.Linear(1, 8),
             torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(8),
             torch.nn.Linear(8, 16),
             torch.nn.ReLU()
         )
 
-        # Combined classifier
+        # Kombinierter Klassifikator
         self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(128 + 16, 64),  # Combine image and metadata features
+            torch.nn.Linear(128 + 16, 64),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(64, num_classes)
         )
 
     def forward(self, img, meta):
-        img_features = self.image_branch(img)  # Extract features from image
-        meta_features = self.meta_branch(meta)  # Process volume metadata
-        combined = torch.cat((img_features, meta_features), dim=1)  # Combine features
-        return self.classifier(combined)  # Final classification
+        # Image Features
+        img_features = self.image_branch(img)  # Extrahiere 1280 Features
+        img_features = self.image_fc(img_features)  # Reduziere auf 128 Features
 
+        # Metadata Features
+        meta_features = self.meta_branch(meta)
+
+        # Features kombinieren
+        combined = torch.cat((img_features, meta_features), dim=1)
+        return self.classifier(combined)
 
 
 
@@ -220,7 +224,7 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
             correct_train += torch.sum(preds == labels.data)
             total_train += labels.size(0)
 
-        epoch_loss = running_loss / len(train_loader.dataset)
+        epoch_loss = running_loss / len(train_loader.sampler)
         epoch_acc = correct_train.double() / total_train
         print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_acc:.4f}")
 
@@ -240,7 +244,7 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
                 correct_val += torch.sum(preds == labels.data)
                 total_val += labels.size(0)
 
-        val_loss /= len(val_loader.dataset)
+        val_loss /= len(val_loader.sampler)
         val_acc = correct_val.double() / total_val
         print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
     return val_loss, val_acc
