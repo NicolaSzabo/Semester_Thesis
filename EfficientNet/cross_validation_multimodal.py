@@ -233,6 +233,9 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         epoch_loss = running_loss / len(train_loader.sampler)
         epoch_acc = correct_train.double() / total_train
         print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_acc:.4f}")
+        
+        writer.add_scalar('Loss/train', epoch_loss, epoch)
+        writer.add_scalar('Accuracy/train', epoch_acc, epoch)
 
         # Log sample images to TensorBoard every 5 epochs
         if epoch % 5 == 0:
@@ -266,6 +269,11 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         val_loss /= len(val_loader.sampler)
         val_acc = correct_val.double() / total_val
         print(f"Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_acc:.4f}")
+        writer.add_scalar('Loss/val', val_loss, epoch)
+        writer.add_scalar('Accuracy/val', val_acc, epoch)
+        
+        
+        
     return val_loss, val_acc
 
 
