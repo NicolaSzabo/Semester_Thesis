@@ -228,11 +228,6 @@ config:
 
 
 
-
-
-
-
-
 comments: efficientnet, cross_validation_multimodal.py, using ['Volume_mL', 'Compactness', 'Surface_mm2']
 
 
