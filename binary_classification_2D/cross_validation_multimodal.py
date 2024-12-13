@@ -82,7 +82,9 @@ filtered_data = good_data[data_overview['data_without_aorta'] == 'yes']
 
 file_paths = filtered_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
 labels = filtered_data['Classification'].tolist()
-volumes = filtered_data['Volume_mL'].tolist()
+features_df = filtered_data[['Volume_mL', 'Mean_Intensity', 'Std_Intensity',
+                             'Min_Intensity', 'Compactness', 'Surface_mm2']]
+
 
 num_class = len(set(labels))
 class_names = sorted(set(labels))
@@ -97,10 +99,10 @@ print(f"Sample file path: {file_paths[0]}, Label: {labels[0]}")
 class HeartClassification(Dataset):
     LABEL_MAP = {'healthy': 0, 'pathological': 1}
 
-    def __init__(self, file_paths, labels, volumes, transform=None):
+    def __init__(self, file_paths, labels, features_df, transform=None):
         self.file_paths = file_paths
         self.labels = labels
-        self.volumes = volumes  # Volume column as metadata
+        self.features_df = features_df  # DataFrame with metadata features
         self.transform = transform
 
     def __len__(self):
@@ -111,9 +113,9 @@ class HeartClassification(Dataset):
         img = nib.load(self.file_paths[index]).get_fdata()
 
         # Extract middle slices for each view
-        middle_axial = img[:, :, img.shape[2] // 2]      # Axial view
-        middle_coronal = img[:, img.shape[1] // 2, :]    # Coronal view
-        middle_sagittal = img[img.shape[0] // 2, :, :]   # Sagittal view
+        middle_axial = img[:, :, img.shape[2] // 2]  # Axial view
+        middle_coronal = img[:, img.shape[1] // 2, :]  # Coronal view
+        middle_sagittal = img[img.shape[0] // 2, :, :]  # Sagittal view
 
         # Stack slices into 3 channels
         multi_view_img = np.stack([middle_coronal, middle_axial, middle_sagittal], axis=0)
@@ -122,22 +124,22 @@ class HeartClassification(Dataset):
         if self.transform:
             multi_view_img = self.transform(multi_view_img)
 
-        # Normalize volume
-        volume = (self.volumes[index] - min(self.volumes)) / (max(self.volumes) - min(self.volumes))
-        meta = torch.tensor([volume], dtype=torch.float32)  # Metadata tensor
-
-        # Convert image to tensor
+        # Ensure the output is a torch.Tensor
         if isinstance(multi_view_img, torch.Tensor):
             multi_view_img = multi_view_img.float()
-        else:
+        elif isinstance(multi_view_img, np.ndarray):
             multi_view_img = torch.from_numpy(multi_view_img).float()
+        else:  # Handle MONAI MetaTensor
+            multi_view_img = torch.from_numpy(np.array(multi_view_img)).float()
+
+        # Fetch metadata features
+        meta_features = torch.tensor(self.features_df.iloc[index].values, dtype=torch.float32)
 
         # Label
         label = self.LABEL_MAP[self.labels[index]]
         label = torch.tensor(label, dtype=torch.long)
 
-        return multi_view_img, meta, label
-
+        return multi_view_img, meta_features, label
 
 
 # Dataset and transforms
@@ -162,7 +164,7 @@ class MultimodalEfficientNet(torch.nn.Module):
 
         # Metadata branch
         self.meta_branch = torch.nn.Sequential(
-            torch.nn.Linear(1, 8),
+            torch.nn.Linear(6, 8),
             torch.nn.ReLU(),
             torch.nn.BatchNorm1d(8),
             torch.nn.Linear(8, 16),
@@ -173,20 +175,21 @@ class MultimodalEfficientNet(torch.nn.Module):
         self.classifier = torch.nn.Sequential(
             torch.nn.Linear(128 + 16, 64),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Dropout(0.7),
             torch.nn.Linear(64, num_classes)
         )
 
     def forward(self, img, meta):
         # Image Features
-        img_features = self.image_branch(img)  # Extrahiere 1280 Features
-        img_features = self.image_fc(img_features)  # Reduziere auf 128 Features
+        img_features = self.image_branch(img)  # Extract 1280 features
+        img_features = self.image_fc(img_features)  # Reduce to 128 features
 
         # Metadata Features
         meta_features = self.meta_branch(meta)
 
-        # Features kombinieren
+        # Combine features
         combined = torch.cat((img_features, meta_features), dim=1)
+
         return self.classifier(combined)
 
 
@@ -194,7 +197,8 @@ class MultimodalEfficientNet(torch.nn.Module):
 
 
 # Data preparation for K-Fold
-dataset = HeartClassification(file_paths, labels, volumes, transform=train_transform)
+dataset = HeartClassification(file_paths, labels, features_df, transform=train_transform)
+
 
 
 k_folds = config.training.k_folds
@@ -267,26 +271,21 @@ def evaluate_model(model, val_loader, device, file_paths, labels, fold):
     y_val = [labels[i] for i in val_indices]  # Validation labels
 
     # Convert `y_val` to integers
-    y_val = [dataset.label_to_index[label] for label in y_val]
+    y_val = [HeartClassification.LABEL_MAP[label] for label in y_val]  # Fixed line
 
     with torch.no_grad():
-        for inputs, labels in val_loader:
-            # Move data to the device
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, meta, labels in val_loader:
+            inputs, meta, labels = inputs.to(device), meta.to(device), labels.to(device)
 
-            # Get model outputs
-            outputs = model(inputs)
+            outputs = model(inputs, meta)
 
-            # Calculate probabilities and predictions
-            probs = torch.softmax(outputs, dim=1)  # Probabilities for each class
+            probs = torch.softmax(outputs, dim=1)
             preds = torch.argmax(probs, dim=1)
 
-            # Collect predictions and true labels
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
 
-    # Convert lists to numpy arrays
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
 
@@ -303,6 +302,8 @@ def evaluate_model(model, val_loader, device, file_paths, labels, fold):
             })
 
     return np.array(y_val), all_preds, np.array(all_probs)
+
+
 
 
 # Function to plot confusion matrix
@@ -381,7 +382,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(dataset)):
     model = MultimodalEfficientNet(num_classes=2).to(device)
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=config.training.lr, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=config.training.lr, momentum=0.9, weight_decay= 1e-4)
 
     # Train and validate the model for this fold
     val_loss, val_acc = train_and_validate(model, train_loader, val_loader, criterion, optimizer,

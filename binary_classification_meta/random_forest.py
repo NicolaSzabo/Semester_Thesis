@@ -7,11 +7,13 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 import matplotlib.pyplot as plt
 
 # 1. Daten laden
-data = pd.read_csv("path_to_your_csv_file.csv")  # Pfad zur CSV-Datei anpassen
+excel_path = '/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx'
+data = pd.read_excel(excel_path)
+good_data = data[data['quality'] == 'good']
 
 # Features und Labels auswählen
-X = data[['Volume_mL', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Surface_mm2']].values
-y = data['Label'].values  # Zielvariable: 0 = healthy, 1 = pathological
+X = good_data[['Volume_mL', 'Surface_mm2', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Std_Intensity', 'Compactness']].values
+y = good_data['Classification'].values  # Zielvariable: 0 = healthy, 1 = pathological
 
 # 2. Daten skalieren
 scaler = StandardScaler()
@@ -38,7 +40,7 @@ model.fit(X, y)
 
 # 6. Feature Importance berechnen und anzeigen
 importances = model.feature_importances_
-feature_names = ['Volume_mL', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Surface_mm2']
+feature_names = ['Volume_mL', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Surface_mm2', 'Std_Intensity', 'Compactness']
 
 # Sortiere die Features nach Wichtigkeit
 sorted_indices = np.argsort(importances)[::-1]

@@ -93,9 +93,9 @@ def add_surface_to_excel_and_compute_means(excel_path, data_folder, output_excel
     print(f"Updated Excel file saved to: {output_excel_path}")
 
 # Eingabepfade
-excel_path = "G://data//data_overview_binary_cleaned_256.xlsx"
-data_folder = "G://data_final_without_aorta"
-output_excel_path = "G://data//data_overview_binary_cleaned_256.xlsx"
+excel_path = "/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx"
+data_folder = "/home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta"
+output_excel_path = "/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx"
 
 # Starte die Funktion
 add_surface_to_excel_and_compute_means(excel_path, data_folder, output_excel_path)
