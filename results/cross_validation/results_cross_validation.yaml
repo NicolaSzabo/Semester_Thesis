@@ -211,3 +211,29 @@ config:
 
 
 comments: DenseNet, cross_validation.py, using resizing 128x128x128, without multimodal
+run_id: Run_2024-13-12_16-00
+start_time: 2024-13-12_12-51
+end_time: 2024-13-12_16-00
+duration: '3:09:38.296390'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta/
+    batch_size: 16
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 100
+    lr: 0.01
+
+
+
+
+
+
+
+
+
+comments: efficientnet, cross_validation_multimodal.py, using ['Volume_mL', 'Compactness', 'Surface_mm2']
+
+
+
