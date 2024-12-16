@@ -232,3 +232,16 @@ comments: efficientnet, cross_validation_multimodal.py, using ['Volume_mL', 'Com
 
 
 
+run_id: Run_2024-14-12_15-14
+start_time: 2024-13-12_18-49
+end_time: 2024-14-12_15-14
+duration: '20:25:31.542578'
+config:
+  dataset:
+    data_dir: /home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta/
+    batch_size: 32
+    num_workers: 48
+  training:
+    k_folds: 5
+    epochs: 1000
+    lr: 0.01
