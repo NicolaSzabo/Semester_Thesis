@@ -12,7 +12,7 @@ data = pd.read_excel(excel_path)
 good_data = data[data['quality'] == 'good']
 
 # Features und Labels auswählen
-X = good_data[['Volume_mL', 'Surface_mm2', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Std_Intensity', 'Compactness']].values
+X = good_data[['Volume_mL', 'Surface_mm2', 'Age']].values
 y = good_data['Classification'].values  # Zielvariable: 0 = healthy, 1 = pathological
 
 # 2. Daten skalieren
@@ -40,7 +40,7 @@ model.fit(X, y)
 
 # 6. Feature Importance berechnen und anzeigen
 importances = model.feature_importances_
-feature_names = ['Volume_mL', 'Mean_Intensity', 'Min_Intensity', 'Max_Intensity', 'Surface_mm2', 'Std_Intensity', 'Compactness']
+feature_names = ['Volume_mL', 'Surface_mm2', 'Age']
 
 # Sortiere die Features nach Wichtigkeit
 sorted_indices = np.argsort(importances)[::-1]
@@ -59,7 +59,6 @@ plt.tight_layout()
 plt.show()
 
 # 8. Modell evaluieren (optional)
-# Teile die Daten manuell auf, um Predictions und Metriken zu berechnen
 from sklearn.model_selection import train_test_split
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
