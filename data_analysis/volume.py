@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import nibabel as nib
 import numpy as np
+import matplotlib.pyplot as plt
 
 def calculate_heart_volume(file_path):
     """
@@ -33,7 +34,7 @@ def calculate_average_volumes(excel_path, data_folder):
         data_folder (str): Folder containing NIfTI files.
 
     Returns:
-        dict: Average volumes per class.
+        dict: Average volumes and standard deviations per class.
     """
     # Load and filter the Excel file for 'good' quality scans
     excel_data = pd.read_excel(excel_path)
@@ -58,23 +59,45 @@ def calculate_average_volumes(excel_path, data_folder):
         else:
             print(f"File not found: {file_path}")
 
-    # Calculate averages
+    # Calculate averages and standard deviations
     avg_healthy_volume = np.mean(healthy_volumes) if healthy_volumes else 0
+    std_healthy_volume = np.std(healthy_volumes) if healthy_volumes else 0
     avg_pathological_volume = np.mean(pathological_volumes) if pathological_volumes else 0
+    std_pathological_volume = np.std(pathological_volumes) if pathological_volumes else 0
 
     # Print results
-    print(f"Average Healthy Heart Volume: {avg_healthy_volume:.2f} mL")
-    print(f"Average Pathological Heart Volume: {avg_pathological_volume:.2f} mL")
+    print(f"Average Healthy Heart Volume: {avg_healthy_volume:.2f} mL (± {std_healthy_volume:.2f} mL)")
+    print(f"Average Pathological Heart Volume: {avg_pathological_volume:.2f} mL (± {std_pathological_volume:.2f} mL)")
+
+    # Improved Boxplot
+    plt.figure(figsize=(8, 6))
+    boxprops = dict(color='darkblue', linewidth=2)
+    medianprops = dict(color='darkblue', linewidth=2)
+    whiskerprops = dict(color='darkblue', linewidth=1.5)
+    capprops = dict(color='darkblue', linewidth=2)
+
+    plt.boxplot([healthy_volumes, pathological_volumes],
+                labels=['Healthy', 'Pathological'],
+                boxprops=boxprops, medianprops=medianprops,
+                whiskerprops=whiskerprops, capprops=capprops, patch_artist=True,
+                widths=0.6)
+
+    plt.title('Heart Volume Comparison', fontsize=16)
+    plt.ylabel('Volume (mL)', fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid(axis='y', linestyle='--', alpha=0.6)
+    plt.savefig('heart_volume_boxplot.png', dpi=300)
+    print("Boxplot saved as 'heart_volume_boxplot.png' in the current directory.")
 
     return {
-        "Healthy": avg_healthy_volume,
-        "Pathological": avg_pathological_volume
+        "Healthy": {"Mean": avg_healthy_volume, "Std": std_healthy_volume},
+        "Pathological": {"Mean": avg_pathological_volume, "Std": std_pathological_volume}
     }
 
 # Input paths
-excel_path = "G://data//data_overview_binary_cleaned_256.xlsx"
-data_folder = "G://data_final_without_aorta"
+excel_path = "/home/fit_member/Documents/NS_SemesterWork/Project/data/data_overview_binary_cleaned_256.xlsx"
+data_folder = "/home/fit_member/Documents/NS_SemesterWork/Project/data_final_without_aorta"
 
 # Run the function
 average_volumes = calculate_average_volumes(excel_path, data_folder)
-

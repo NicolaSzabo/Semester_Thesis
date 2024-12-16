@@ -82,7 +82,7 @@ filtered_data = good_data[data_overview['data_without_aorta'] == 'yes']
 
 file_paths = filtered_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
 labels = filtered_data['Classification'].tolist()
-features_df = filtered_data[['Volume_mL', 'Compactness', 'Surface_mm2']]
+features_df = filtered_data[['Volume_mL']]
 
 
 num_class = len(set(labels))
@@ -165,7 +165,7 @@ class MultimodalEfficientNet(torch.nn.Module):
 
         # Metadata branch
         self.meta_branch = torch.nn.Sequential(
-            torch.nn.Linear(3, 8),
+            torch.nn.Linear(1, 8),
             torch.nn.ReLU(),
             torch.nn.BatchNorm1d(8),
             torch.nn.Linear(8, 16),
