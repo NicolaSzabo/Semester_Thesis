@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from monai.networks.nets import DenseNet121, DenseNet169
-from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize, RandGaussianNoise
+from monai.transforms import Compose, LoadImage, EnsureChannelFirst, ScaleIntensity, RandFlip, RandZoom, Resize, RandGaussianNoise, RandRotate
 from sklearn.model_selection import KFold
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
@@ -63,10 +63,10 @@ data_dir = config.dataset.data_dir
 class HeartClassification(Dataset):
     LABEL_MAP = {'healthy': 0, 'pathological': 1}
 
-    def __init__(self, file_paths, labels, volumes, transform=None):
+    def __init__(self, file_paths, labels, features_df, transform=None):
         self.file_paths = file_paths
         self.labels = labels
-        self.volumes = volumes  # Volume column as metadata
+        self.features_df = features_df  # Volume column as metadata
         self.transform = transform
 
     def __len__(self):
@@ -79,14 +79,13 @@ class HeartClassification(Dataset):
             img = self.transform(img)
 
         # Normalize volume
-        volume = (self.volumes[index] - min(self.volumes)) / (max(self.volumes) - min(self.volumes))
-        meta = torch.tensor([volume], dtype=torch.float32)
+        meta_features = torch.tensor(self.features_df.iloc[index].values, dtype=torch.float32)
 
         # Label
         label = self.LABEL_MAP[self.labels[index]]
         label = torch.tensor(label, dtype=torch.long)
 
-        return img, meta, label
+        return img, meta_features, label
 
 
 
@@ -97,6 +96,8 @@ train_transform = Compose([
     RandFlip(spatial_axis=0, prob=0.5),
     RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),
     RandGaussianNoise(prob = 0.5, mean = 0.0, std = 0.1),
+    RandRotate(range_x=15, prob=0.5, keep_size=True),  # Rotate up to 15 degrees
+    RandZoom(min_zoom=0.9, max_zoom=1.1, prob=0.5),   # Random zoom between 90% and 110%
 ])
 
 
@@ -114,7 +115,7 @@ class MultimodalDenseNet(torch.nn.Module):
 
         # Metadata branch (1 input for volume)
         self.meta_branch = torch.nn.Sequential(
-            torch.nn.Linear(1, 8),
+            torch.nn.Linear(3, 8),
             torch.nn.ReLU(),
             torch.nn.Linear(8, 16),
             torch.nn.ReLU()
@@ -142,7 +143,7 @@ excel_data = pd.read_excel('/home/fit_member/Documents/NS_SemesterWork/Project/d
 good_quality_data = excel_data[excel_data['quality'] == 'good']
 file_paths = good_quality_data['Nr'].apply(lambda x: os.path.join(data_dir, f"{x}.nii.gz")).tolist()
 labels = good_quality_data['Classification'].tolist()
-volumes = good_quality_data['Volume_mL'].tolist()  # Use precomputed volumes
+features_df = good_quality_data[['Volume_mL', 'Surface_mm2', 'Age']]
 
 num_class = len(set(labels))
 class_names = sorted(set(labels))
@@ -156,7 +157,7 @@ print(f"Sample file path: {file_paths[0]}, Label: {labels[0]}")
 
 
 # Dataset and DataLoader
-dataset = HeartClassification(file_paths, labels, volumes, transform=train_transform)
+dataset = HeartClassification(file_paths, labels, features_df, transform=train_transform)
 k_folds = config.training.k_folds
 batch_size = config.dataset.batch_size
 num_workers = config.dataset.num_workers
@@ -173,6 +174,8 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         running_loss = 0.0
         correct_train = 0
         total_train = 0
+
+
         for inputs, meta, labels in train_loader:
             labels = labels[0] if isinstance(labels, tuple) else labels
 
@@ -191,6 +194,8 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, ep
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = correct_train.double() / total_train
         print(f"Epoch {epoch + 1}: Train Loss: {epoch_loss:.4f}, Train Accuracy: {epoch_acc:.4f}")
+
+
         writer.add_scalar('Loss/train', epoch_loss, epoch)
         writer.add_scalar('Accuracy/train', epoch_acc, epoch)
 

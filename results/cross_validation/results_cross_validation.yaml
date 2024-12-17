@@ -294,7 +294,8 @@ config:
 
 
 
-comments: efficientnet, cross_validation_multimodal.py, using ['Volume_mL', 'Surface_mm2', 'Age']run_id: Run_2024-16-12_18-12
+comments: efficientnet, cross_validation_multimodal.py, using ['Volume_mL', 'Surface_mm2', 'Age']
+run_id: Run_2024-16-12_18-12
 start_time: 2024-16-12_16-06
 end_time: 2024-16-12_18-12
 duration: '2:06:05.384964'
@@ -307,3 +308,7 @@ config:
     k_folds: 5
     epochs: 100
     lr: 0.01
+
+
+
+comments: DenseNet, cross_validation_multimodal.py, using ['Volume_mL', 'Surface_mm2', 'Age'], no resizing
